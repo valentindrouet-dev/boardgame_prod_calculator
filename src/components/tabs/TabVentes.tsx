@@ -35,7 +35,6 @@ function ScenarioCard({ game, scenario }: { game: Game; scenario: SalesScenario 
   const update = (patch: Partial<SalesScenario>) => updateSalesScenario(game.id, scenario.id, patch);
   const calc = calcSales(game, game.salesScenarios.indexOf(scenario));
   const selectedQuote = game.factoryQuotes.find(q => q.id === scenario.factoryQuoteId);
-  const totalQtyPlanned = scenario.boutiqueQty + scenario.distributeurQty + scenario.bbgQty;
 
   return (
     <div className="bg-white rounded-lg shadow border border-gray-200 min-w-72 flex-1">
@@ -229,22 +228,16 @@ function ScenarioCard({ game, scenario }: { game: Game; scenario: SalesScenario 
         <div className="border border-gray-200 rounded overflow-hidden">
           <div className="bg-gray-100 px-2 py-1 text-xs font-bold text-gray-700">Invendus / Presse</div>
           <div className="p-2 space-y-1.5">
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <label className="flex flex-col gap-0.5">
-                <span className="text-gray-500">% du tirage</span>
-                <div className="flex items-center gap-0.5">
-                  <NumInput value={scenario.unsoldPercent} step="1" min={0} onChange={v => update({ unsoldPercent: v })} />
-                  <span className="text-gray-400">%</span>
-                </div>
-              </label>
-              <div></div>
-            </div>
-            {calc && (
+            {calc && selectedQuote && (
               <table className="w-full">
                 <tbody>
-                  <Row label="Qté totale planifiée" value={totalQtyPlanned.toString()} />
-                  <Row label="Invendus / Presse estimés" value={calc.unsoldQty.toString()} valueClass="text-gray-500" />
-                  <Row label="Vendus estimés" value={calc.totalSoldQty.toString()} />
+                  <Row label={`Tirage total (${selectedQuote.quantity} unités)`} value={selectedQuote.quantity.toString()} />
+                  <Row label="Vendus (Boutique + Distrib + BBG)" value={calc.totalSoldQty.toString()} valueClass="text-green-700" />
+                  <Row
+                    label="Invendus / Presse (auto)"
+                    value={`${calc.unsoldQty} unités (${selectedQuote.quantity > 0 ? (calc.unsoldQty / selectedQuote.quantity * 100).toFixed(1) : 0}%)`}
+                    valueClass={calc.unsoldQty < 0 ? 'text-red-600 font-bold' : 'text-gray-500'}
+                  />
                 </tbody>
               </table>
             )}

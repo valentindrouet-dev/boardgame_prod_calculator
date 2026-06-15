@@ -129,9 +129,9 @@ export function calcSales(game: Game, scenarioIndex: number): SalesCalc | null {
   const marginDistributeurPerUnit = distributeurPriceHT - costPerUnitHT;
   const marginBBGPerUnit = bbgSalePriceHT - costPerUnitHT;
 
-  const totalQty = scenario.boutiqueQty + scenario.distributeurQty + scenario.bbgQty;
-  const unsoldQty = Math.round(totalQty * scenario.unsoldPercent / 100);
-  const totalSoldQty = totalQty - unsoldQty;
+  const totalSoldQty = scenario.boutiqueQty + scenario.distributeurQty + scenario.bbgQty;
+  const totalQty = quote.quantity > 0 ? quote.quantity : totalSoldQty;
+  const unsoldQty = Math.max(0, totalQty - totalSoldQty);
 
   const totalAchatBoutiqueHT = scenario.boutiqueQty * boutiquePriceHT;
   const totalMarginBoutiqueHT = scenario.boutiqueQty * marginBoutiquePerUnit;

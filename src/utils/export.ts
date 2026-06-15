@@ -153,7 +153,7 @@ export async function exportPDF(game: Game) {
           ['Prix Boutique HT', fmt(calc.boutiquePriceHT), `${scenario.boutiqueQty} unités (marge ${scenario.boutiqueMarginPercent}%)`],
           ['Prix Distributeur HT', fmt(calc.distributeurPriceHT), `${scenario.distributeurQty} unités (marge +${scenario.distributeurAdditionalMarginPercent}%)`],
           ['Prix Vente BBG HT', fmt(calc.bbgSalePriceHT), `${scenario.bbgQty} unités (${scenario.bbgSalePricePercent}% PVC)`],
-          ['Invendus', `${calc.unsoldQty} (${scenario.unsoldPercent}%)`, ''],
+          ['Invendus / Presse', `${calc.unsoldQty} (${quote && quote.quantity > 0 ? (calc.unsoldQty / quote.quantity * 100).toFixed(1) : 0}%)`, 'auto'],
           ['Total Ventes HT', fmt(calc.totalVentesHT), fmt(calc.totalVentesTTC) + ' TTC'],
           ['Total Marge HT', fmt(calc.totalMarginHT), ''],
           ...(scenario.authorRoyaltyPercent > 0 ? [
