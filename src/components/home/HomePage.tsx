@@ -113,10 +113,13 @@ export function HomePage({ onOpenGame }: { onOpenGame: (id: string) => void }) {
     g.salesScenarios.map((_, si) => ({ game: g, calc: calcSales(g, si) }))
   ).filter(x => x.calc !== null) as { game: Game; calc: NonNullable<ReturnType<typeof calcSales>> }[];
 
+  // Investment = fixed costs + cheapest factory quote per game (devis are alternatives, not cumulative)
   const totalInvestment = games.reduce((sum, g) => {
-    const devComm = calcDevTotalHT(g) + calcLogisticsTotalHT(g) + calcCommTotalHT(g);
-    const fab = g.factoryQuotes.reduce((s, q) => s + calcFabTotalHT(q), 0);
-    return sum + devComm + fab;
+    const fixed = calcDevTotalHT(g) + calcLogisticsTotalHT(g) + calcCommTotalHT(g);
+    const cheapestFab = g.factoryQuotes.length > 0
+      ? Math.min(...g.factoryQuotes.map(q => calcFabTotalHT(q)))
+      : 0;
+    return sum + fixed + cheapestFab;
   }, 0);
 
   const totalRevenue = allScenarios.reduce((sum, { calc }) => sum + calc.totalVentesHT, 0);
@@ -155,7 +158,7 @@ export function HomePage({ onOpenGame }: { onOpenGame: (id: string) => void }) {
                 <StatCard
                   label="Investissement total"
                   value={fmt(totalInvestment)}
-                  sub="dév + fab + transport + comm"
+                  sub="dév + transport + comm + devis le moins cher"
                   color="red"
                 />
                 {allScenarios.length > 0 && (
