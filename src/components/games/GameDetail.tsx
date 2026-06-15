@@ -8,9 +8,8 @@ import { TabFabrication } from '../tabs/TabFabrication';
 import { TabCommunication } from '../tabs/TabCommunication';
 import { TabResume } from '../tabs/TabResume';
 import { TabVentes } from '../tabs/TabVentes';
-import { TabComposants } from '../tabs/TabComposants';
 
-const TABS = ['Résumé', 'Composants', 'Développement', 'Fabrication', 'Communication', 'Ventes'] as const;
+const TABS = ['Résumé', 'Développement', 'Fabrication', 'Communication', 'Ventes'] as const;
 type Tab = typeof TABS[number];
 
 function HTTCConverter({ vatRate }: { vatRate: number }) {
@@ -140,16 +139,7 @@ export function GameDetail({ game }: { game: Game }) {
             }`}
             onClick={() => setTab(t)}
           >
-            {t === 'Composants' ? (
-              <span className="flex items-center gap-1.5">
-                Composants
-                {(game.gameComponents ?? []).length > 0 && (
-                  <span className="bg-gray-200 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">
-                    {(game.gameComponents ?? []).length}
-                  </span>
-                )}
-              </span>
-            ) : t}
+            {t}
           </button>
         ))}
       </div>
@@ -157,7 +147,6 @@ export function GameDetail({ game }: { game: Game }) {
       {/* Content */}
       <div className="flex-1 overflow-auto p-6">
         {tab === 'Résumé' && <TabResume game={game} />}
-        {tab === 'Composants' && <TabComposants game={game} />}
         {tab === 'Développement' && <TabDevelopment game={game} />}
         {tab === 'Fabrication' && <TabFabrication game={game} />}
         {tab === 'Communication' && <TabCommunication game={game} />}

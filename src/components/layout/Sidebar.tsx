@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { Plus, Trash2, Gamepad2, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Gamepad2, ExternalLink, LayoutDashboard } from 'lucide-react';
 import { useGameStore } from '../../store';
+import type { ActivePage } from '../../App';
 
 interface SidebarProps {
-  activePage: 'game' | 'links';
-  onNavigate: (page: 'game' | 'links') => void;
+  activePage: ActivePage;
+  onNavigate: (page: ActivePage) => void;
+  onOpenGame: (id: string) => void;
 }
 
-export function Sidebar({ activePage, onNavigate }: SidebarProps) {
-  const { games, activeGameId, setActiveGame, addGame, removeGame, fabricationLinks } = useGameStore();
+export function Sidebar({ activePage, onNavigate, onOpenGame }: SidebarProps) {
+  const { games, activeGameId, addGame, removeGame, fabricationLinks } = useGameStore();
   const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
 
@@ -17,12 +19,6 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
     addGame(newName.trim());
     setNewName('');
     setAdding(false);
-    onNavigate('game');
-  }
-
-  function handleSelectGame(id: string) {
-    setActiveGame(id);
-    onNavigate('game');
   }
 
   return (
@@ -35,24 +31,40 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
         <p className="text-xs text-gray-400 mt-1">Production de jeux de société</p>
       </div>
 
-      <div className="flex-1 overflow-auto py-2">
+      {/* Dashboard nav */}
+      <button
+        className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors border-b border-gray-800 ${
+          activePage === 'home' ? 'bg-yellow-500 text-gray-900 font-bold' : 'text-gray-300 hover:bg-gray-800'
+        }`}
+        onClick={() => onNavigate('home')}
+      >
+        <LayoutDashboard size={15} />
+        Tableau de bord
+      </button>
+
+      {/* Games list */}
+      <div className="flex-1 overflow-auto py-1">
+        <div className="px-4 py-1.5 text-xs text-gray-500 uppercase tracking-wide">Projets</div>
         {games.map(game => (
           <div
             key={game.id}
-            className={`group flex items-center justify-between px-4 py-3 cursor-pointer transition-colors ${
+            className={`group flex items-center justify-between px-4 py-2.5 cursor-pointer transition-colors ${
               game.id === activeGameId && activePage === 'game' ? 'bg-gray-700 border-l-4 border-yellow-400' : 'hover:bg-gray-800'
             }`}
-            onClick={() => handleSelectGame(game.id)}
+            onClick={() => onOpenGame(game.id)}
           >
             <span className="text-sm font-medium truncate">{game.name}</span>
             <button
-              className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity"
+              className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity shrink-0"
               onClick={(e) => { e.stopPropagation(); removeGame(game.id); }}
             >
               <Trash2 size={14} />
             </button>
           </div>
         ))}
+        {games.length === 0 && (
+          <p className="px-4 py-2 text-xs text-gray-600 italic">Aucun projet</p>
+        )}
       </div>
 
       {/* Global links nav */}
