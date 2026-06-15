@@ -103,11 +103,22 @@ function ScenarioCard({ game, scenario }: { game: Game; scenario: SalesScenario 
         <div className="border border-orange-200 rounded overflow-hidden">
           <div className="bg-orange-100 px-2 py-1 text-xs font-bold text-orange-800">Boutique</div>
           <div className="p-2 space-y-1.5">
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-3 gap-2 text-xs">
               <label className="flex flex-col gap-0.5">
                 <span className="text-gray-500">Marge Boutique %</span>
                 <div className="flex items-center gap-0.5">
                   <NumInput value={scenario.boutiqueMarginPercent} step="1" min={0} onChange={v => update({ boutiqueMarginPercent: v })} />
+                  <span className="text-gray-400">%</span>
+                </div>
+              </label>
+              <label className="flex flex-col gap-0.5">
+                <span className="text-gray-500">% du tirage</span>
+                <div className="flex items-center gap-0.5">
+                  <NumInput
+                    value={selectedQuote && selectedQuote.quantity > 0 ? Math.round(scenario.boutiqueQty / selectedQuote.quantity * 1000) / 10 : 0}
+                    step="1" min={0}
+                    onChange={v => update({ boutiqueQty: Math.round((selectedQuote?.quantity ?? 0) * v / 100) })}
+                  />
                   <span className="text-gray-400">%</span>
                 </div>
               </label>
@@ -134,11 +145,22 @@ function ScenarioCard({ game, scenario }: { game: Game; scenario: SalesScenario 
         <div className="border border-blue-200 rounded overflow-hidden">
           <div className="bg-blue-100 px-2 py-1 text-xs font-bold text-blue-800">Distributeur</div>
           <div className="p-2 space-y-1.5">
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-3 gap-2 text-xs">
               <label className="flex flex-col gap-0.5">
                 <span className="text-gray-500">Marge Distrib. %</span>
                 <div className="flex items-center gap-0.5">
                   <NumInput value={scenario.distributeurAdditionalMarginPercent} step="1" min={0} onChange={v => update({ distributeurAdditionalMarginPercent: v })} />
+                  <span className="text-gray-400">%</span>
+                </div>
+              </label>
+              <label className="flex flex-col gap-0.5">
+                <span className="text-gray-500">% du tirage</span>
+                <div className="flex items-center gap-0.5">
+                  <NumInput
+                    value={selectedQuote && selectedQuote.quantity > 0 ? Math.round(scenario.distributeurQty / selectedQuote.quantity * 1000) / 10 : 0}
+                    step="1" min={0}
+                    onChange={v => update({ distributeurQty: Math.round((selectedQuote?.quantity ?? 0) * v / 100) })}
+                  />
                   <span className="text-gray-400">%</span>
                 </div>
               </label>
@@ -165,11 +187,22 @@ function ScenarioCard({ game, scenario }: { game: Game; scenario: SalesScenario 
         <div className="border border-green-200 rounded overflow-hidden">
           <div className="bg-green-100 px-2 py-1 text-xs font-bold text-green-800">BBG Direct</div>
           <div className="p-2 space-y-1.5">
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-3 gap-2 text-xs">
               <label className="flex flex-col gap-0.5">
                 <span className="text-gray-500">% du PVC HT</span>
                 <div className="flex items-center gap-0.5">
                   <NumInput value={scenario.bbgSalePricePercent} step="1" min={0} onChange={v => update({ bbgSalePricePercent: v })} />
+                  <span className="text-gray-400">%</span>
+                </div>
+              </label>
+              <label className="flex flex-col gap-0.5">
+                <span className="text-gray-500">% du tirage</span>
+                <div className="flex items-center gap-0.5">
+                  <NumInput
+                    value={selectedQuote && selectedQuote.quantity > 0 ? Math.round(scenario.bbgQty / selectedQuote.quantity * 1000) / 10 : 0}
+                    step="1" min={0}
+                    onChange={v => update({ bbgQty: Math.round((selectedQuote?.quantity ?? 0) * v / 100) })}
+                  />
                   <span className="text-gray-400">%</span>
                 </div>
               </label>
@@ -192,35 +225,26 @@ function ScenarioCard({ game, scenario }: { game: Game; scenario: SalesScenario 
           </div>
         </div>
 
-        {/* Invendus & Auteur */}
+        {/* Invendus */}
         <div className="border border-gray-200 rounded overflow-hidden">
-          <div className="bg-gray-100 px-2 py-1 text-xs font-bold text-gray-700">Invendus & Droits Auteur</div>
+          <div className="bg-gray-100 px-2 py-1 text-xs font-bold text-gray-700">Invendus / Presse</div>
           <div className="p-2 space-y-1.5">
             <div className="grid grid-cols-2 gap-2 text-xs">
               <label className="flex flex-col gap-0.5">
-                <span className="text-gray-500">Invendus / Presse %</span>
+                <span className="text-gray-500">% du tirage</span>
                 <div className="flex items-center gap-0.5">
                   <NumInput value={scenario.unsoldPercent} step="1" min={0} onChange={v => update({ unsoldPercent: v })} />
                   <span className="text-gray-400">%</span>
                 </div>
               </label>
-              <label className="flex flex-col gap-0.5">
-                <span className="text-gray-500">Droits Auteur %</span>
-                <div className="flex items-center gap-0.5">
-                  <NumInput value={scenario.authorRoyaltyPercent} step="0.5" min={0} onChange={v => update({ authorRoyaltyPercent: v })} />
-                  <span className="text-gray-400">%</span>
-                </div>
-              </label>
+              <div></div>
             </div>
             {calc && (
               <table className="w-full">
                 <tbody>
                   <Row label="Qté totale planifiée" value={totalQtyPlanned.toString()} />
-                  <Row label="Invendus estimés" value={calc.unsoldQty.toString()} valueClass="text-gray-500" />
+                  <Row label="Invendus / Presse estimés" value={calc.unsoldQty.toString()} valueClass="text-gray-500" />
                   <Row label="Vendus estimés" value={calc.totalSoldQty.toString()} />
-                  {scenario.authorRoyaltyPercent > 0 && (
-                    <Row label="Total Droits Auteur" value={`-${fmt(calc.authorRoyaltyTotal)}`} valueClass="text-red-600" />
-                  )}
                 </tbody>
               </table>
             )}
@@ -248,14 +272,37 @@ function ScenarioCard({ game, scenario }: { game: Game; scenario: SalesScenario 
                 {fmt(calc.totalMarginHT)}
               </span>
             </div>
-            {scenario.authorRoyaltyPercent > 0 && (
-              <div className="flex justify-between text-sm border-t border-yellow-300 pt-1">
-                <span className="font-medium text-red-700">Marge nette (−Auteur)</span>
-                <span className={`font-bold text-base ${calc.totalMarginMinusAuthor >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+
+            {/* Droits Auteur */}
+            <div className="border-t border-yellow-300 pt-2 mt-1 space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-600 font-medium">Droits Auteur</span>
+                <div className="flex items-center gap-1">
+                  <NumInput
+                    value={scenario.authorRoyaltyPercent}
+                    step="0.5"
+                    min={0}
+                    className="w-14 text-right"
+                    onChange={v => update({ authorRoyaltyPercent: v })}
+                  />
+                  <span className="text-gray-400">% PVC HT</span>
+                </div>
+              </div>
+              {scenario.authorRoyaltyPercent > 0 && (
+                <div className="flex justify-between text-xs text-red-600 pl-2">
+                  <span>= {calc.totalSoldQty} vendus × {fmt(scenario.pvcHT)} × {scenario.authorRoyaltyPercent}%</span>
+                  <span className="font-medium">-{fmt(calc.authorRoyaltyTotal)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm font-bold pt-1 border-t border-yellow-300">
+                <span className={scenario.authorRoyaltyPercent > 0 ? 'text-gray-700' : 'text-gray-400'}>
+                  Marge Finale après Droits
+                </span>
+                <span className={calc.totalMarginMinusAuthor >= 0 ? 'text-green-700' : 'text-red-700'}>
                   {fmt(calc.totalMarginMinusAuthor)}
                 </span>
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>

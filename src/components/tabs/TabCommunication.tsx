@@ -6,7 +6,9 @@ import { calcCommTotalHT, fmt } from '../../utils/calculations';
 export function TabCommunication({ game }: { game: Game }) {
   const { addCommItem, updateCommItem, removeCommItem } = useGameStore();
 
+  const commSubtotalHT = game.communicationItems.reduce((s, item) => s + item.monthlyPriceHT * item.months, 0);
   const totalHT = calcCommTotalHT(game);
+  const marginHT = totalHT - commSubtotalHT;
   const totalTTC = totalHT * (1 + game.vatRate / 100);
 
   return (
@@ -87,12 +89,26 @@ export function TabCommunication({ game }: { game: Game }) {
             })}
 
             {game.communicationItems.length > 0 && (
-              <tr className="bg-purple-100 font-bold border-t-2 border-purple-300">
-                <td className="px-3 py-2" colSpan={4}>TOTAL Communication</td>
-                <td className="px-3 py-2 text-right text-purple-800">{fmt(totalHT)}</td>
-                <td className="px-3 py-2 text-right text-purple-700">{fmt(totalTTC)}</td>
-                <td></td>
-              </tr>
+              <>
+                <tr className="bg-purple-50 border-t border-purple-200 text-xs text-gray-600 italic">
+                  <td className="px-3 py-1.5" colSpan={4}>Sous-total HT (avant marges)</td>
+                  <td className="px-3 py-1.5 text-right">{fmt(commSubtotalHT)}</td>
+                  <td className="px-3 py-1.5 text-right">{fmt(commSubtotalHT * (1 + game.vatRate / 100))}</td>
+                  <td></td>
+                </tr>
+                <tr className="bg-purple-50 text-xs text-purple-700 italic">
+                  <td className="px-3 py-1.5" colSpan={4}>+ Marges de sécurité</td>
+                  <td className="px-3 py-1.5 text-right">+{fmt(marginHT)}</td>
+                  <td className="px-3 py-1.5 text-right">+{fmt(marginHT * (1 + game.vatRate / 100))}</td>
+                  <td></td>
+                </tr>
+                <tr className="bg-purple-100 font-bold border-t-2 border-purple-300">
+                  <td className="px-3 py-2" colSpan={4}>TOTAL Communication</td>
+                  <td className="px-3 py-2 text-right text-purple-800">{fmt(totalHT)}</td>
+                  <td className="px-3 py-2 text-right text-purple-700">{fmt(totalTTC)}</td>
+                  <td></td>
+                </tr>
+              </>
             )}
 
             {/* Per-unit for each factory quote */}
