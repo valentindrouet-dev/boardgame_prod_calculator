@@ -1,8 +1,8 @@
 import type { Game } from '../../types';
 import {
-  calcDevPerUnit, calcFabPerUnitEUR, calcLogisticsPerUnit, calcCommPerUnit,
+  calcDevPerUnit, calcFabPerUnitEUR, calcLogisticsPerUnit,
   calcCostPerUnitHT, calcDevTotalHT, calcFabTotalHT, calcLogisticsTotalHT, calcCommTotalHT,
-  fmt
+  calcCommPerUnit, fmt
 } from '../../utils/calculations';
 
 export function TabResume({ game }: { game: Game }) {
@@ -27,7 +27,7 @@ export function TabResume({ game }: { game: Game }) {
     },
     {
       label: 'Transport / unité HT',
-      values: game.factoryQuotes.map(q => calcLogisticsPerUnit(q)),
+      values: game.factoryQuotes.map(q => calcLogisticsPerUnit(game, q)),
       highlight: false,
     },
     {
@@ -54,6 +54,7 @@ export function TabResume({ game }: { game: Game }) {
 
   const totalsRows = [
     { label: 'Développement total HT', value: calcDevTotalHT(game) },
+    { label: 'Transport total HT', value: calcLogisticsTotalHT(game) },
     { label: 'Communication total HT', value: calcCommTotalHT(game) },
   ];
 
@@ -105,7 +106,7 @@ export function TabResume({ game }: { game: Game }) {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Transport</span>
-                <span>{fmt(calcLogisticsPerUnit(q))}/u · {fmt(calcLogisticsTotalHT(q))}</span>
+                <span>{fmt(calcLogisticsPerUnit(game, q))}/u · {fmt(calcLogisticsTotalHT(game))}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Communication</span>

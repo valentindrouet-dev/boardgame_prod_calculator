@@ -4,7 +4,7 @@ import type { Game, FactoryQuote } from '../../types';
 import { useGameStore } from '../../store';
 import {
   calcFabPerUnitEUR, calcFabTotalHT,
-  calcLogisticsSubtotalHT, calcLogisticsTotalHT, calcLogisticsPerUnit,
+  calcLogisticsSubtotalHT, calcLogisticsTotalHT,
   fmt, fmtUSD
 } from '../../utils/calculations';
 
@@ -23,21 +23,19 @@ function NumInput({ value, onChange, step = '0.01', className = '' }: {
 }
 
 function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
-  const { updateFactoryQuote, removeFactoryQuote, addComponent, updateComponent, removeComponent, moveComponent, addLogisticsItem, updateLogisticsItem, removeLogisticsItem, moveLogisticsItem } = useGameStore();
+  const { updateFactoryQuote, removeFactoryQuote, addComponent, updateComponent, removeComponent, moveComponent } = useGameStore();
   const [expanded, setExpanded] = useState(true);
 
   const update = (patch: Partial<FactoryQuote>) => updateFactoryQuote(game.id, quote.id, patch);
 
   const compSubtotalEUR = quote.components.reduce((s, c) => s + c.priceUSD * c.quantity * quote.dollarToEuroRate, 0);
   const fabPerUnit = calcFabPerUnitEUR(quote);
+  const fabPerUnitTTC = fabPerUnit * (1 + game.vatRate / 100);
   const fabTotal = calcFabTotalHT(quote);
-  const logSubtotal = calcLogisticsSubtotalHT(quote);
-  const logTotal = calcLogisticsTotalHT(quote);
-  const logPerUnit = calcLogisticsPerUnit(quote);
+  const fabTotalTTC = fabTotal * (1 + game.vatRate / 100);
 
   return (
     <div className="bg-white rounded-lg shadow border border-gray-200 mb-6">
-      {/* Quote header */}
       <div className="bg-gray-700 text-white px-4 py-3 rounded-t-lg flex items-center justify-between">
         <div className="flex items-center gap-3">
           <input
@@ -67,9 +65,9 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
       </div>
 
       {expanded && (
-        <div className="p-4 space-y-6">
+        <div className="p-4">
           {/* Parameters */}
-          <div className="flex gap-6 bg-gray-50 p-3 rounded text-sm">
+          <div className="flex gap-6 bg-gray-50 p-3 rounded text-sm mb-4">
             <label className="flex items-center gap-2">
               <span className="text-gray-600">Taux $ → €</span>
               <input
@@ -91,30 +89,34 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
             </label>
           </div>
 
-          {/* Manufacturing components */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-gray-700">Composants de Fabrication</h3>
-              <button
-                className="flex items-center gap-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded transition-colors"
-                onClick={() => addComponent(game.id, quote.id)}
-              >
-                <Plus size={12} />
-                Composant
-              </button>
-            </div>
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-amber-100 text-xs text-amber-900">
-                  <th className="px-2 py-1.5 text-left">Composant</th>
-                  <th className="px-2 py-1.5 text-center w-16">Qté</th>
-                  <th className="px-2 py-1.5 text-right w-28">Prix $ (total)</th>
-                  <th className="px-2 py-1.5 text-right w-28">Prix € (total)</th>
-                  <th className="w-16"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {quote.components.map((comp, idx) => (
+          {/* Components table */}
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-gray-700 text-sm">Composants de Fabrication</h3>
+            <button
+              className="flex items-center gap-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded transition-colors"
+              onClick={() => addComponent(game.id, quote.id)}
+            >
+              <Plus size={12} />
+              Composant
+            </button>
+          </div>
+
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-amber-100 text-xs text-amber-900">
+                <th className="px-2 py-1.5 text-left">Composant</th>
+                <th className="px-2 py-1.5 text-center w-16">Qté</th>
+                <th className="px-2 py-1.5 text-right w-28">Prix $ (unit.)</th>
+                <th className="px-2 py-1.5 text-right w-28">Prix HT €</th>
+                <th className="px-2 py-1.5 text-right w-28">Prix TTC €</th>
+                <th className="w-16"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {quote.components.map((comp, idx) => {
+                const priceEUR = comp.priceUSD * comp.quantity * quote.dollarToEuroRate;
+                const priceTTC = priceEUR * (1 + game.vatRate / 100);
+                return (
                   <tr key={comp.id} className={`border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                     <td className="px-2 py-1">
                       <input
@@ -137,149 +139,192 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
                         className="w-full px-1 py-0.5 border border-gray-200 rounded text-right text-sm focus:outline-none focus:border-yellow-400"
                       />
                     </td>
-                    <td className="px-2 py-1 text-right font-medium text-amber-700">
-                      {fmt(comp.priceUSD * comp.quantity * quote.dollarToEuroRate)}
-                    </td>
+                    <td className="px-2 py-1 text-right font-medium text-amber-700">{fmt(priceEUR)}</td>
+                    <td className="px-2 py-1 text-right text-amber-600">{fmt(priceTTC)}</td>
                     <td className="px-2 py-1">
                       <div className="flex items-center gap-0.5">
                         <button
                           className="text-gray-400 hover:text-gray-700 disabled:opacity-20"
                           onClick={() => moveComponent(game.id, quote.id, comp.id, 'up')}
-                          disabled={quote.components.indexOf(comp) === 0}
-                        ><ChevronUp size={13} /></button>
-                        <button
-                          className="text-gray-400 hover:text-gray-700 disabled:opacity-20"
-                          onClick={() => moveComponent(game.id, quote.id, comp.id, 'down')}
-                          disabled={quote.components.indexOf(comp) === quote.components.length - 1}
-                        ><ChevronDown size={13} /></button>
-                        <button
-                          className="text-red-400 hover:text-red-600 ml-0.5"
-                          onClick={() => removeComponent(game.id, quote.id, comp.id)}
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-
-                {/* Sous-total */}
-                <tr className="bg-amber-50 text-xs italic text-gray-600 border-t border-amber-200">
-                  <td className="px-2 py-1" colSpan={3}>
-                    Marge d'Incertitude {quote.uncertaintyMarginPercent}%
-                  </td>
-                  <td className="px-2 py-1 text-right">{fmt(fabPerUnit - compSubtotalEUR)}</td>
-                  <td></td>
-                </tr>
-                <tr className="bg-amber-100 font-bold text-sm border-t border-amber-300">
-                  <td className="px-2 py-1.5" colSpan={2}>TOTAL Fabrication / unité</td>
-                  <td className="px-2 py-1.5 text-right text-xs text-gray-500">{fmtUSD(quote.components.reduce((s,c) => s + c.priceUSD * c.quantity, 0))}</td>
-                  <td className="px-2 py-1.5 text-right text-amber-800">{fmt(fabPerUnit)}</td>
-                  <td></td>
-                </tr>
-                <tr className="bg-amber-200 font-bold text-sm">
-                  <td className="px-2 py-1.5" colSpan={2}>TOTAL Fabrication ({quote.quantity} unités)</td>
-                  <td colSpan={2} className="px-2 py-1.5 text-right text-amber-900">{fmt(fabTotal)}</td>
-
-                  <td></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Logistics */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-gray-700">Transport & Logistique</h3>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1 text-xs text-gray-600 italic">
-                  Marge Sécurité
-                  <input
-                    type="number" step="1" min="0" max="100"
-                    value={quote.logisticsSafetyMarginPercent || ''}
-                    onChange={e => update({ logisticsSafetyMarginPercent: parseFloat(e.target.value) || 0 })}
-                    className="w-14 px-1 py-0.5 border border-gray-300 rounded text-right text-xs focus:outline-none focus:border-yellow-400"
-                  />
-                  %
-                </label>
-                <button
-                  className="flex items-center gap-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded transition-colors"
-                  onClick={() => addLogisticsItem(game.id, quote.id)}
-                >
-                  <Plus size={12} />
-                  Poste
-                </button>
-              </div>
-            </div>
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-green-100 text-xs text-green-900">
-                  <th className="px-2 py-1.5 text-left">Poste</th>
-                  <th className="px-2 py-1.5 text-left">Description</th>
-                  <th className="px-2 py-1.5 text-right w-28">Prix HT</th>
-                  <th className="w-16"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {quote.logistics.map((item, idx) => (
-                  <tr key={item.id} className={`border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                    <td className="px-2 py-1">
-                      <input
-                        type="text" value={item.name} placeholder="Poste..."
-                        onChange={e => updateLogisticsItem(game.id, quote.id, item.id, { name: e.target.value })}
-                        className="w-full px-1 py-0.5 border border-gray-200 rounded text-sm focus:outline-none focus:border-yellow-400"
-                      />
-                    </td>
-                    <td className="px-2 py-1">
-                      <input
-                        type="text" value={item.description} placeholder="Détail..."
-                        onChange={e => updateLogisticsItem(game.id, quote.id, item.id, { description: e.target.value })}
-                        className="w-full px-1 py-0.5 border border-gray-200 rounded text-sm focus:outline-none focus:border-yellow-400"
-                      />
-                    </td>
-                    <td className="px-2 py-1">
-                      <NumInput value={item.priceHT} onChange={v => updateLogisticsItem(game.id, quote.id, item.id, { priceHT: v })} />
-                    </td>
-                    <td className="px-2 py-1">
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          className="text-gray-400 hover:text-gray-700 disabled:opacity-20"
-                          onClick={() => moveLogisticsItem(game.id, quote.id, item.id, 'up')}
                           disabled={idx === 0}
                         ><ChevronUp size={13} /></button>
                         <button
                           className="text-gray-400 hover:text-gray-700 disabled:opacity-20"
-                          onClick={() => moveLogisticsItem(game.id, quote.id, item.id, 'down')}
-                          disabled={idx === quote.logistics.length - 1}
+                          onClick={() => moveComponent(game.id, quote.id, comp.id, 'down')}
+                          disabled={idx === quote.components.length - 1}
                         ><ChevronDown size={13} /></button>
                         <button
                           className="text-red-400 hover:text-red-600 ml-0.5"
-                          onClick={() => removeLogisticsItem(game.id, quote.id, item.id)}
+                          onClick={() => removeComponent(game.id, quote.id, comp.id)}
                         ><Trash2 size={12} /></button>
                       </div>
                     </td>
                   </tr>
-                ))}
-                <tr className="bg-green-50 text-xs italic text-gray-600 border-t border-green-200">
-                  <td className="px-2 py-1" colSpan={2}>Marge Sécurité {quote.logisticsSafetyMarginPercent}%</td>
-                  <td className="px-2 py-1 text-right">{fmt(logTotal - logSubtotal)}</td>
-                  <td></td>
-                </tr>
-                <tr className="bg-green-100 text-xs text-gray-600 border-t border-green-200">
-                  <td className="px-2 py-1" colSpan={2}>TOTAL Transport / unité</td>
-                  <td className="px-2 py-1 text-right font-medium">{fmt(logPerUnit)}</td>
-                  <td></td>
-                </tr>
-                <tr className="bg-green-200 font-bold text-sm">
-                  <td className="px-2 py-1.5" colSpan={2}>TOTAL Transport</td>
-                  <td className="px-2 py-1.5 text-right text-green-900">{fmt(logTotal)}</td>
-                  <td></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
+
+              {/* Subtotal / margin row */}
+              <tr className="bg-amber-50 text-xs italic text-gray-600 border-t border-amber-200">
+                <td className="px-2 py-1" colSpan={3}>
+                  Marge d'Incertitude {quote.uncertaintyMarginPercent}%
+                </td>
+                <td className="px-2 py-1 text-right">{fmt(fabPerUnit - compSubtotalEUR)}</td>
+                <td className="px-2 py-1 text-right">{fmt((fabPerUnit - compSubtotalEUR) * (1 + game.vatRate / 100))}</td>
+                <td></td>
+              </tr>
+              <tr className="bg-amber-100 font-bold text-sm border-t border-amber-300">
+                <td className="px-2 py-1.5" colSpan={3}>TOTAL Fabrication / unité</td>
+                <td className="px-2 py-1.5 text-right text-amber-800">{fmt(fabPerUnit)}</td>
+                <td className="px-2 py-1.5 text-right text-amber-700">{fmt(fabPerUnitTTC)}</td>
+                <td></td>
+              </tr>
+              <tr className="bg-amber-200 font-bold text-sm">
+                <td className="px-2 py-1.5" colSpan={3}>TOTAL Fabrication ({quote.quantity.toLocaleString('fr-FR')} unités)</td>
+                <td className="px-2 py-1.5 text-right text-amber-900">{fmt(fabTotal)}</td>
+                <td className="px-2 py-1.5 text-right text-amber-800">{fmt(fabTotalTTC)}</td>
+                <td></td>
+              </tr>
+              {/* USD subtotal info */}
+              <tr className="bg-gray-50 text-xs text-gray-400">
+                <td className="px-2 py-1" colSpan={6}>
+                  Sous-total USD : {fmtUSD(quote.components.reduce((s, c) => s + c.priceUSD * c.quantity, 0))} · Taux : {quote.dollarToEuroRate}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function LogisticsSection({ game }: { game: Game }) {
+  const { addLogisticsItem, updateLogisticsItem, removeLogisticsItem, moveLogisticsItem, updateGame } = useGameStore();
+
+  const logSubtotal = calcLogisticsSubtotalHT(game);
+  const logTotal = calcLogisticsTotalHT(game);
+  const logTotalTTC = logTotal * (1 + game.vatRate / 100);
+
+  return (
+    <div className="bg-white rounded-lg shadow border border-gray-200">
+      <div className="bg-green-800 text-white px-4 py-3 rounded-t-lg flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h3 className="font-bold">Transport &amp; Logistique</h3>
+          <span className="text-green-300 text-xs">— commun à toutes les usines</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1 text-sm text-green-200 italic">
+            Marge Sécurité
+            <input
+              type="number" step="1" min="0" max="100"
+              value={game.logisticsSafetyMarginPercent ?? 20}
+              onChange={e => updateGame(game.id, { logisticsSafetyMarginPercent: parseFloat(e.target.value) || 0 })}
+              className="w-14 bg-green-700 text-white px-1 py-0.5 rounded text-right text-sm border border-green-600 focus:outline-none focus:border-yellow-400"
+            />
+            %
+          </label>
+          <button
+            className="flex items-center gap-1 text-xs bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded transition-colors"
+            onClick={() => addLogisticsItem(game.id)}
+          >
+            <Plus size={12} />
+            Poste
+          </button>
+        </div>
+      </div>
+
+      <div className="p-4">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="bg-green-100 text-xs text-green-900">
+              <th className="px-2 py-1.5 text-left">Poste</th>
+              <th className="px-2 py-1.5 text-left">Description</th>
+              <th className="px-2 py-1.5 text-right w-28">Prix HT</th>
+              <th className="px-2 py-1.5 text-right w-28">Prix TTC</th>
+              <th className="w-16"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {(game.logistics ?? []).map((item, idx) => (
+              <tr key={item.id} className={`border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                <td className="px-2 py-1">
+                  <input
+                    type="text" value={item.name} placeholder="Poste..."
+                    onChange={e => updateLogisticsItem(game.id, item.id, { name: e.target.value })}
+                    className="w-full px-1 py-0.5 border border-gray-200 rounded text-sm focus:outline-none focus:border-yellow-400"
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    type="text" value={item.description} placeholder="Détail..."
+                    onChange={e => updateLogisticsItem(game.id, item.id, { description: e.target.value })}
+                    className="w-full px-1 py-0.5 border border-gray-200 rounded text-sm focus:outline-none focus:border-yellow-400"
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <NumInput value={item.priceHT} onChange={v => updateLogisticsItem(game.id, item.id, { priceHT: v })} />
+                </td>
+                <td className="px-2 py-1 text-right text-green-700 font-medium">
+                  {fmt(item.priceHT * (1 + game.vatRate / 100))}
+                </td>
+                <td className="px-2 py-1">
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      className="text-gray-400 hover:text-gray-700 disabled:opacity-20"
+                      onClick={() => moveLogisticsItem(game.id, item.id, 'up')}
+                      disabled={idx === 0}
+                    ><ChevronUp size={13} /></button>
+                    <button
+                      className="text-gray-400 hover:text-gray-700 disabled:opacity-20"
+                      onClick={() => moveLogisticsItem(game.id, item.id, 'down')}
+                      disabled={idx === (game.logistics ?? []).length - 1}
+                    ><ChevronDown size={13} /></button>
+                    <button
+                      className="text-red-400 hover:text-red-600 ml-0.5"
+                      onClick={() => removeLogisticsItem(game.id, item.id)}
+                    ><Trash2 size={12} /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+
+            {(game.logistics ?? []).length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-2 py-4 text-center text-gray-400 text-sm">
+                  Cliquez sur "+ Poste" pour ajouter un poste logistique
+                </td>
+              </tr>
+            )}
+
+            <tr className="bg-green-50 text-xs italic text-gray-600 border-t border-green-200">
+              <td className="px-2 py-1" colSpan={2}>Marge Sécurité {game.logisticsSafetyMarginPercent ?? 20}%</td>
+              <td className="px-2 py-1 text-right">{fmt(logTotal - logSubtotal)}</td>
+              <td className="px-2 py-1 text-right">{fmt((logTotal - logSubtotal) * (1 + game.vatRate / 100))}</td>
+              <td></td>
+            </tr>
+            <tr className="bg-green-200 font-bold text-sm">
+              <td className="px-2 py-1.5" colSpan={2}>TOTAL Transport</td>
+              <td className="px-2 py-1.5 text-right text-green-900">{fmt(logTotal)}</td>
+              <td className="px-2 py-1.5 text-right text-green-800">{fmt(logTotalTTC)}</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Per-unit breakdown for each factory quote */}
+        {game.factoryQuotes.length > 0 && (
+          <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(game.factoryQuotes.length, 4)}, 1fr)` }}>
+            {game.factoryQuotes.map(q => (
+              <div key={q.id} className="bg-green-50 border border-green-200 rounded px-3 py-2 text-xs">
+                <div className="font-semibold text-green-800">{q.factoryName} ({q.quantity.toLocaleString('fr-FR')} u.)</div>
+                <div className="text-green-700 mt-0.5">
+                  {q.quantity > 0 ? `${fmt(logTotal / q.quantity)} / unité HT` : '—'}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -301,7 +346,7 @@ export function TabFabrication({ game }: { game: Game }) {
       </div>
 
       {game.factoryQuotes.length === 0 && (
-        <p className="text-gray-400 text-center py-12">
+        <p className="text-gray-400 text-center py-8">
           Aucun devis d'usine. Cliquez sur "Ajouter Usine" pour commencer.
         </p>
       )}
@@ -309,6 +354,10 @@ export function TabFabrication({ game }: { game: Game }) {
       {game.factoryQuotes.map(quote => (
         <QuoteCard key={quote.id} game={game} quote={quote} />
       ))}
+
+      <div className="mt-2">
+        <LogisticsSection game={game} />
+      </div>
     </div>
   );
 }

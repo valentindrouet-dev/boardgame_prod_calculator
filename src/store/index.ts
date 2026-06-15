@@ -41,11 +41,11 @@ interface GameStore {
   removeComponent: (gameId: string, quoteId: string, compId: string) => void;
   moveComponent: (gameId: string, quoteId: string, compId: string, direction: 'up' | 'down') => void;
 
-  // Logistics
-  addLogisticsItem: (gameId: string, quoteId: string) => void;
-  updateLogisticsItem: (gameId: string, quoteId: string, itemId: string, patch: Partial<LogisticsItem>) => void;
-  removeLogisticsItem: (gameId: string, quoteId: string, itemId: string) => void;
-  moveLogisticsItem: (gameId: string, quoteId: string, itemId: string, direction: 'up' | 'down') => void;
+  // Logistics (game-level, independent of factory quote)
+  addLogisticsItem: (gameId: string) => void;
+  updateLogisticsItem: (gameId: string, itemId: string, patch: Partial<LogisticsItem>) => void;
+  removeLogisticsItem: (gameId: string, itemId: string) => void;
+  moveLogisticsItem: (gameId: string, itemId: string, direction: 'up' | 'down') => void;
 
   // Communication
   addCommItem: (gameId: string) => void;
@@ -75,12 +75,12 @@ export const useGameStore = create<GameStore>()(
         const id = uid();
         const now = new Date().toISOString();
         const newGame: Game = {
-          id,
-          name,
-          vatRate: 20,
+          id, name, vatRate: 20,
           developmentItems: [],
           developmentSafetyMarginPercent: 10,
           factoryQuotes: [],
+          logistics: [],
+          logisticsSafetyMarginPercent: 20,
           communicationItems: [],
           salesScenarios: [],
           gameComponents: [],
@@ -160,8 +160,6 @@ export const useGameStore = create<GameStore>()(
                 components: [],
                 uncertaintyMarginPercent: 20,
                 dollarToEuroRate: 0.85,
-                logistics: [],
-                logisticsSafetyMarginPercent: 20,
               }]
             }
           ),
@@ -251,64 +249,45 @@ export const useGameStore = create<GameStore>()(
           ),
         })),
 
-      addLogisticsItem: (gameId, quoteId) =>
+      // Game-level logistics
+      addLogisticsItem: (gameId) =>
         set((s) => ({
           games: s.games.map((g) =>
             g.id !== gameId ? g : {
               ...g,
-              factoryQuotes: g.factoryQuotes.map((q) =>
-                q.id !== quoteId ? q : {
-                  ...q,
-                  logistics: [...q.logistics, { id: uid(), name: '', description: '', priceHT: 0 }]
-                }
+              logistics: [...(g.logistics ?? []), { id: uid(), name: '', description: '', priceHT: 0 }]
+            }
+          ),
+        })),
+
+      updateLogisticsItem: (gameId, itemId, patch) =>
+        set((s) => ({
+          games: s.games.map((g) =>
+            g.id !== gameId ? g : {
+              ...g,
+              logistics: (g.logistics ?? []).map((l) =>
+                l.id !== itemId ? l : { ...l, ...patch }
               )
             }
           ),
         })),
 
-      updateLogisticsItem: (gameId, quoteId, itemId, patch) =>
+      removeLogisticsItem: (gameId, itemId) =>
         set((s) => ({
           games: s.games.map((g) =>
             g.id !== gameId ? g : {
               ...g,
-              factoryQuotes: g.factoryQuotes.map((q) =>
-                q.id !== quoteId ? q : {
-                  ...q,
-                  logistics: q.logistics.map((l) =>
-                    l.id !== itemId ? l : { ...l, ...patch }
-                  )
-                }
-              )
+              logistics: (g.logistics ?? []).filter((l) => l.id !== itemId)
             }
           ),
         })),
 
-      removeLogisticsItem: (gameId, quoteId, itemId) =>
+      moveLogisticsItem: (gameId, itemId, direction) =>
         set((s) => ({
           games: s.games.map((g) =>
             g.id !== gameId ? g : {
               ...g,
-              factoryQuotes: g.factoryQuotes.map((q) =>
-                q.id !== quoteId ? q : {
-                  ...q,
-                  logistics: q.logistics.filter((l) => l.id !== itemId)
-                }
-              )
-            }
-          ),
-        })),
-
-      moveLogisticsItem: (gameId, quoteId, itemId, direction) =>
-        set((s) => ({
-          games: s.games.map((g) =>
-            g.id !== gameId ? g : {
-              ...g,
-              factoryQuotes: g.factoryQuotes.map((q) =>
-                q.id !== quoteId ? q : {
-                  ...q,
-                  logistics: move(q.logistics, itemId, direction),
-                }
-              )
+              logistics: move(g.logistics ?? [], itemId, direction),
             }
           ),
         })),

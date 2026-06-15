@@ -2,7 +2,7 @@ import type { Game } from '../types';
 import {
   calcDevTotalHT, calcDevTotalTTC, calcDevPerUnit,
   calcFabPerUnitEUR, calcFabTotalHT,
-  calcLogisticsTotalHT, calcLogisticsPerUnit,
+  calcLogisticsTotalHT, calcLogisticsSubtotalHT, calcLogisticsPerUnit,
   calcCommTotalHT, calcCommPerUnit,
   calcCostPerUnitHT, calcSales, fmt
 } from './calculations';
@@ -89,19 +89,23 @@ export async function exportPDF(game: Game) {
       headStyles: { fillColor: [55, 65, 81] },
     });
 
-    const lastY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+  }
 
+  // Logistics page (shared across all factories)
+  if ((game.logistics ?? []).length > 0) {
+    doc.addPage();
+    addHeader('Transport & Logistique (commun à toutes les usines)');
     autoTable(doc, {
-      startY: lastY,
-      head: [['Transport & Logistique', 'Description', 'Prix HT']],
+      startY: 22,
+      head: [['Poste', 'Description', 'Prix HT', 'Prix TTC']],
       body: [
-        ...quote.logistics.map(l => [l.name, l.description, fmt(l.priceHT)]),
-        [`Marge Sécurité ${quote.logisticsSafetyMarginPercent}%`, '', fmt(calcLogisticsTotalHT(quote) - quote.logistics.reduce((s, l) => s + l.priceHT, 0))],
-        ['TOTAL Transport (par unité)', '', fmt(calcLogisticsPerUnit(quote))],
-        ['TOTAL Transport', '', fmt(calcLogisticsTotalHT(quote))],
+        ...(game.logistics ?? []).map(l => [l.name, l.description, fmt(l.priceHT), fmt(l.priceHT * (1 + game.vatRate / 100))]),
+        [`Marge Sécurité ${game.logisticsSafetyMarginPercent ?? 20}%`, '', fmt(calcLogisticsTotalHT(game) - calcLogisticsSubtotalHT(game)), ''],
+        ['TOTAL Transport HT', '', fmt(calcLogisticsTotalHT(game)), fmt(calcLogisticsTotalHT(game) * (1 + game.vatRate / 100))],
+        ...game.factoryQuotes.map(q => [`  → par unité (${q.factoryName} ${q.quantity} u.)`, '', fmt(calcLogisticsPerUnit(game, q)), '']),
       ],
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [120, 53, 15] },
+      headStyles: { fillColor: [21, 128, 61] },
     });
   }
 
@@ -170,7 +174,7 @@ export async function exportPDF(game: Game) {
     const rows = [
       ['Développement / unité', ...game.factoryQuotes.map(q => fmt(calcDevPerUnit(game, q)))],
       ['Fabrication / unité', ...game.factoryQuotes.map(q => fmt(calcFabPerUnitEUR(q)))],
-      ['Transport / unité', ...game.factoryQuotes.map(q => fmt(calcLogisticsPerUnit(q)))],
+      ['Transport / unité', ...game.factoryQuotes.map(q => fmt(calcLogisticsPerUnit(game, q)))],
       ['Communication / unité', ...game.factoryQuotes.map(q => fmt(calcCommPerUnit(game, q)))],
       ['COÛT TOTAL / unité HT', ...game.factoryQuotes.map(q => fmt(calcCostPerUnitHT(game, q, true)))],
       ['COÛT TOTAL / unité TTC', ...game.factoryQuotes.map(q => fmt(calcCostPerUnitHT(game, q, true) * (1 + game.vatRate / 100)))],

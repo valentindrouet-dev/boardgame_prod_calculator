@@ -35,17 +35,17 @@ export function calcFabTotalHT(quote: FactoryQuote): number {
   return calcFabPerUnitEUR(quote) * quote.quantity;
 }
 
-export function calcLogisticsSubtotalHT(quote: FactoryQuote): number {
-  return quote.logistics.reduce((sum, l) => sum + l.priceHT, 0);
+export function calcLogisticsSubtotalHT(game: Game): number {
+  return (game.logistics ?? []).reduce((sum, l) => sum + l.priceHT, 0);
 }
 
-export function calcLogisticsTotalHT(quote: FactoryQuote): number {
-  return calcLogisticsSubtotalHT(quote) * (1 + quote.logisticsSafetyMarginPercent / 100);
+export function calcLogisticsTotalHT(game: Game): number {
+  return calcLogisticsSubtotalHT(game) * (1 + (game.logisticsSafetyMarginPercent ?? 20) / 100);
 }
 
-export function calcLogisticsPerUnit(quote: FactoryQuote): number {
+export function calcLogisticsPerUnit(game: Game, quote: FactoryQuote): number {
   if (quote.quantity === 0) return 0;
-  return calcLogisticsTotalHT(quote) / quote.quantity;
+  return calcLogisticsTotalHT(game) / quote.quantity;
 }
 
 export function calcCommTotalHT(game: Game): number {
@@ -65,7 +65,7 @@ export function calcCostPerUnitHT(
   includeDev: boolean
 ): number {
   const dev = includeDev ? calcDevPerUnit(game, quote) : 0;
-  return dev + calcFabPerUnitEUR(quote) + calcLogisticsPerUnit(quote) + calcCommPerUnit(game, quote);
+  return dev + calcFabPerUnitEUR(quote) + calcLogisticsPerUnit(game, quote) + calcCommPerUnit(game, quote);
 }
 
 export interface SalesCalc {

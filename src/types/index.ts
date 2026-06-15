@@ -30,8 +30,6 @@ export interface FactoryQuote {
   components: ManufacturingComponent[];
   uncertaintyMarginPercent: number;
   dollarToEuroRate: number;
-  logistics: LogisticsItem[];
-  logisticsSafetyMarginPercent: number;
 }
 
 export interface CommunicationItem {
@@ -73,6 +71,8 @@ export interface Game {
   developmentItems: DevelopmentItem[];
   developmentSafetyMarginPercent: number;
   factoryQuotes: FactoryQuote[];
+  logistics: LogisticsItem[];
+  logisticsSafetyMarginPercent: number;
   communicationItems: CommunicationItem[];
   salesScenarios: SalesScenario[];
   gameComponents: GameComponent[];
