@@ -1,7 +1,8 @@
 import type { Game, FactoryQuote } from '../types';
 
 export function fmt(n: number): string {
-  return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  const decimals = Math.abs(n) < 100 ? 2 : 0;
+  return n.toLocaleString('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + ' €';
 }
 
 export function fmtUSD(n: number): string {
