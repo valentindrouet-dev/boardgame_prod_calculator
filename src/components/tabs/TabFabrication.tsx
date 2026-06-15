@@ -127,7 +127,15 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
                       <NumInput value={comp.quantity} step="1" onChange={v => updateComponent(game.id, quote.id, comp.id, { quantity: v })} />
                     </td>
                     <td className="px-2 py-1">
-                      <NumInput value={comp.priceUSD} step="0.001" onChange={v => updateComponent(game.id, quote.id, comp.id, { priceUSD: v })} />
+                      <input
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        defaultValue={comp.priceUSD || ''}
+                        key={comp.id + '-price'}
+                        onBlur={e => updateComponent(game.id, quote.id, comp.id, { priceUSD: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-1 py-0.5 border border-gray-200 rounded text-right text-sm focus:outline-none focus:border-yellow-400"
+                      />
                     </td>
                     <td className="px-2 py-1 text-right font-medium text-amber-700">
                       {fmt(comp.priceUSD * comp.quantity * quote.dollarToEuroRate)}
@@ -160,6 +168,7 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
                 <tr className="bg-amber-200 font-bold text-sm">
                   <td className="px-2 py-1.5" colSpan={2}>TOTAL Fabrication ({quote.quantity} unités)</td>
                   <td colSpan={2} className="px-2 py-1.5 text-right text-amber-900">{fmt(fabTotal)}</td>
+
                   <td></td>
                 </tr>
               </tbody>

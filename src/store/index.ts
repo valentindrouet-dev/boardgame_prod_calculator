@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Game, DevelopmentItem, FactoryQuote, ManufacturingComponent, LogisticsItem, CommunicationItem, SalesScenario } from '../types';
+import type { Game, DevelopmentItem, FactoryQuote, ManufacturingComponent, LogisticsItem, CommunicationItem, SalesScenario, GameComponent } from '../types';
 
 function uid(): string {
   return crypto.randomUUID();
@@ -43,6 +43,11 @@ interface GameStore {
   addSalesScenario: (gameId: string) => void;
   updateSalesScenario: (gameId: string, scenarioId: string, patch: Partial<SalesScenario>) => void;
   removeSalesScenario: (gameId: string, scenarioId: string) => void;
+
+  // Game Components
+  addGameComponent: (gameId: string) => void;
+  updateGameComponent: (gameId: string, compId: string, patch: Partial<GameComponent>) => void;
+  removeGameComponent: (gameId: string, compId: string) => void;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -65,6 +70,7 @@ export const useGameStore = create<GameStore>()(
           factoryQuotes: [],
           communicationItems: [],
           salesScenarios: [],
+          gameComponents: [],
           createdAt: now,
           updatedAt: now,
         };
@@ -330,6 +336,40 @@ export const useGameStore = create<GameStore>()(
             g.id !== gameId ? g : {
               ...g,
               salesScenarios: g.salesScenarios.filter((sc) => sc.id !== scenarioId)
+            }
+          ),
+        })),
+
+      addGameComponent: (gameId) =>
+        set((s) => ({
+          games: s.games.map((g) =>
+            g.id !== gameId ? g : {
+              ...g,
+              gameComponents: [...(g.gameComponents ?? []), {
+                id: uid(), name: '', category: '', progressPercent: 0, notes: ''
+              }]
+            }
+          ),
+        })),
+
+      updateGameComponent: (gameId, compId, patch) =>
+        set((s) => ({
+          games: s.games.map((g) =>
+            g.id !== gameId ? g : {
+              ...g,
+              gameComponents: (g.gameComponents ?? []).map((c) =>
+                c.id !== compId ? c : { ...c, ...patch }
+              )
+            }
+          ),
+        })),
+
+      removeGameComponent: (gameId, compId) =>
+        set((s) => ({
+          games: s.games.map((g) =>
+            g.id !== gameId ? g : {
+              ...g,
+              gameComponents: (g.gameComponents ?? []).filter((c) => c.id !== compId)
             }
           ),
         })),

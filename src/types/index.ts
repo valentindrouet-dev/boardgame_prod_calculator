@@ -58,6 +58,14 @@ export interface SalesScenario {
   includeDevelopmentCost: boolean;
 }
 
+export interface GameComponent {
+  id: string;
+  name: string;
+  category: string;
+  progressPercent: number;
+  notes: string;
+}
+
 export interface Game {
   id: string;
   name: string;
@@ -67,6 +75,7 @@ export interface Game {
   factoryQuotes: FactoryQuote[];
   communicationItems: CommunicationItem[];
   salesScenarios: SalesScenario[];
+  gameComponents: GameComponent[];
   createdAt: string;
   updatedAt: string;
 }
