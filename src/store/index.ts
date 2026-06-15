@@ -195,7 +195,7 @@ export const useGameStore = create<GameStore>()(
               factoryQuotes: g.factoryQuotes.map((q) =>
                 q.id !== quoteId ? q : {
                   ...q,
-                  components: [...q.components, { id: uid(), name: '', quantity: 1, priceUSD: 0 }]
+                  components: [...q.components, { id: uid(), name: '', description: '', quantity: 1, priceUSD: 0 }]
                 }
               )
             }

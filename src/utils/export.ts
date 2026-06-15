@@ -73,10 +73,11 @@ export async function exportPDF(game: Game) {
 
     autoTable(doc, {
       startY: 22,
-      head: [['Composant', 'Qté', 'Prix $', 'Prix €']],
+      head: [['Composant', 'Description', 'Qté', 'Prix $', 'Prix €']],
       body: [
         ...quote.components.map(c => [
           c.name,
+          c.description ?? '',
           c.quantity,
           `$${(c.priceUSD * c.quantity).toFixed(2)}`,
           fmt(c.priceUSD * c.quantity * quote.dollarToEuroRate),

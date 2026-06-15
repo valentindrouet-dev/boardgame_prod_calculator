@@ -105,6 +105,7 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
             <thead>
               <tr className="bg-amber-100 text-xs text-amber-900">
                 <th className="px-2 py-1.5 text-left">Composant</th>
+                <th className="px-2 py-1.5 text-left">Description</th>
                 <th className="px-2 py-1.5 text-center w-16">Qté</th>
                 <th className="px-2 py-1.5 text-right w-28">Prix $ (unit.)</th>
                 <th className="px-2 py-1.5 text-right w-28">Prix HT €</th>
@@ -123,6 +124,13 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
                         type="text" value={comp.name} placeholder="Nom..."
                         onChange={e => updateComponent(game.id, quote.id, comp.id, { name: e.target.value })}
                         className="w-full px-1 py-0.5 border border-gray-200 rounded text-sm focus:outline-none focus:border-yellow-400"
+                      />
+                    </td>
+                    <td className="px-2 py-1">
+                      <input
+                        type="text" value={comp.description ?? ''} placeholder="Description..."
+                        onChange={e => updateComponent(game.id, quote.id, comp.id, { description: e.target.value })}
+                        className="w-full px-1 py-0.5 border border-gray-200 rounded text-sm focus:outline-none focus:border-yellow-400 text-gray-500"
                       />
                     </td>
                     <td className="px-2 py-1">

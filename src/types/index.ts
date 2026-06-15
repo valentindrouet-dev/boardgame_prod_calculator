@@ -12,6 +12,7 @@ export interface DevelopmentItem {
 export interface ManufacturingComponent {
   id: string;
   name: string;
+  description: string;
   quantity: number;
   priceUSD: number;
 }
