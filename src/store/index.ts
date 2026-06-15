@@ -160,6 +160,7 @@ export const useGameStore = create<GameStore>()(
                 components: [],
                 uncertaintyMarginPercent: 20,
                 dollarToEuroRate: 0.85,
+                toolingUSD: 0,
               }]
             }
           ),
@@ -195,7 +196,7 @@ export const useGameStore = create<GameStore>()(
               factoryQuotes: g.factoryQuotes.map((q) =>
                 q.id !== quoteId ? q : {
                   ...q,
-                  components: [...q.components, { id: uid(), name: '', description: '', quantity: 1, priceUSD: 0 }]
+                  components: [...q.components, { id: uid(), name: '', size: '', description: '', quantity: 1, priceUSD: 0 }]
                 }
               )
             }

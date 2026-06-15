@@ -12,6 +12,7 @@ export interface DevelopmentItem {
 export interface ManufacturingComponent {
   id: string;
   name: string;
+  size: string;
   description: string;
   quantity: number;
   priceUSD: number;
@@ -31,6 +32,7 @@ export interface FactoryQuote {
   components: ManufacturingComponent[];
   uncertaintyMarginPercent: number;
   dollarToEuroRate: number;
+  toolingUSD: number;
 }
 
 export interface CommunicationItem {

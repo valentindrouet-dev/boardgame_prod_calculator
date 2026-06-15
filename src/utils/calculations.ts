@@ -24,15 +24,24 @@ export function calcDevPerUnit(game: Game, quote: FactoryQuote): number {
   return calcDevTotalHT(game) / quote.quantity;
 }
 
-export function calcFabPerUnitEUR(quote: FactoryQuote): number {
+export function calcFabComponentsPerUnitEUR(quote: FactoryQuote): number {
   const subtotal = quote.components.reduce((sum, c) => {
     return sum + c.priceUSD * c.quantity * quote.dollarToEuroRate;
   }, 0);
   return subtotal * (1 + quote.uncertaintyMarginPercent / 100);
 }
 
+export function calcFabToolingEUR(quote: FactoryQuote): number {
+  return (quote.toolingUSD ?? 0) * quote.dollarToEuroRate;
+}
+
+export function calcFabPerUnitEUR(quote: FactoryQuote): number {
+  const toolingPerUnit = quote.quantity > 0 ? calcFabToolingEUR(quote) / quote.quantity : 0;
+  return calcFabComponentsPerUnitEUR(quote) + toolingPerUnit;
+}
+
 export function calcFabTotalHT(quote: FactoryQuote): number {
-  return calcFabPerUnitEUR(quote) * quote.quantity;
+  return calcFabComponentsPerUnitEUR(quote) * quote.quantity + calcFabToolingEUR(quote);
 }
 
 export function calcLogisticsSubtotalHT(game: Game): number {

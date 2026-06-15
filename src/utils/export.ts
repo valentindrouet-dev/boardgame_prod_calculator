@@ -1,7 +1,7 @@
 import type { Game } from '../types';
 import {
   calcDevTotalHT, calcDevTotalTTC, calcDevPerUnit,
-  calcFabPerUnitEUR, calcFabTotalHT,
+  calcFabPerUnitEUR, calcFabTotalHT, calcFabComponentsPerUnitEUR, calcFabToolingEUR,
   calcLogisticsTotalHT, calcLogisticsSubtotalHT, calcLogisticsPerUnit,
   calcCommTotalHT, calcCommPerUnit,
   calcCostPerUnitHT, calcSales, fmt
@@ -69,22 +69,26 @@ export async function exportPDF(game: Game) {
 
     const fabPerUnit = calcFabPerUnitEUR(quote);
     const fabTotal = calcFabTotalHT(quote);
-    const compSubtotal = quote.components.reduce((s, c) => s + c.priceUSD * c.quantity * quote.dollarToEuroRate, 0);
+    const compSubtotalEUR = quote.components.reduce((s, c) => s + c.priceUSD * c.quantity * quote.dollarToEuroRate, 0);
+    const compPerUnit = calcFabComponentsPerUnitEUR(quote);
+    const toolingEUR = calcFabToolingEUR(quote);
 
     autoTable(doc, {
       startY: 22,
-      head: [['Composant', 'Description', 'Qté', 'Prix $', 'Prix €']],
+      head: [['Composant', 'Taille', 'Description', 'Qté', 'Prix $', 'Prix €']],
       body: [
         ...quote.components.map(c => [
           c.name,
+          c.size ?? '',
           c.description ?? '',
           c.quantity,
           `$${(c.priceUSD * c.quantity).toFixed(2)}`,
           fmt(c.priceUSD * c.quantity * quote.dollarToEuroRate),
         ]),
-        [`Marge d'Incertitude ${quote.uncertaintyMarginPercent}%`, '', '', fmt(fabPerUnit - compSubtotal)],
-        [`TOTAL Fabrication (par unité) — taux $→€ ${quote.dollarToEuroRate}`, '', '', fmt(fabPerUnit)],
-        [`TOTAL Fabrication (${quote.quantity} unités)`, '', '', fmt(fabTotal)],
+        [`Marge d'Incertitude ${quote.uncertaintyMarginPercent}%`, '', '', '', '', fmt(compPerUnit - compSubtotalEUR)],
+        ...(toolingEUR > 0 ? [[`Outillage / Tooling (coût unique)`, '', '', '', `$${(quote.toolingUSD ?? 0).toFixed(2)}`, fmt(toolingEUR)]] : []),
+        [`TOTAL Fabrication (par unité amorti) — taux $→€ ${quote.dollarToEuroRate}`, '', '', '', '', fmt(fabPerUnit)],
+        [`TOTAL Fabrication (${quote.quantity} unités)`, '', '', '', '', fmt(fabTotal)],
       ],
       styles: { fontSize: 8 },
       headStyles: { fillColor: [55, 65, 81] },

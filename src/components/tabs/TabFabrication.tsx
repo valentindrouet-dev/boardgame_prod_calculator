@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { Game, FactoryQuote } from '../../types';
 import { useGameStore } from '../../store';
 import {
-  calcFabPerUnitEUR, calcFabTotalHT,
+  calcFabPerUnitEUR, calcFabTotalHT, calcFabToolingEUR, calcFabComponentsPerUnitEUR,
   calcLogisticsSubtotalHT, calcLogisticsTotalHT,
   fmt, fmtUSD
 } from '../../utils/calculations';
@@ -28,7 +28,6 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
 
   const update = (patch: Partial<FactoryQuote>) => updateFactoryQuote(game.id, quote.id, patch);
 
-  const compSubtotalEUR = quote.components.reduce((s, c) => s + c.priceUSD * c.quantity * quote.dollarToEuroRate, 0);
   const fabPerUnit = calcFabPerUnitEUR(quote);
   const fabPerUnitTTC = fabPerUnit * (1 + game.vatRate / 100);
   const fabTotal = calcFabTotalHT(quote);
@@ -105,6 +104,7 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
             <thead>
               <tr className="bg-amber-100 text-xs text-amber-900">
                 <th className="px-2 py-1.5 text-left">Composant</th>
+                <th className="px-2 py-1.5 text-left w-24">Taille</th>
                 <th className="px-2 py-1.5 text-left">Description</th>
                 <th className="px-2 py-1.5 text-center w-16">Qté</th>
                 <th className="px-2 py-1.5 text-right w-28">Prix $ (unit.)</th>
@@ -124,6 +124,13 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
                         type="text" value={comp.name} placeholder="Nom..."
                         onChange={e => updateComponent(game.id, quote.id, comp.id, { name: e.target.value })}
                         className="w-full px-1 py-0.5 border border-gray-200 rounded text-sm focus:outline-none focus:border-yellow-400"
+                      />
+                    </td>
+                    <td className="px-2 py-1">
+                      <input
+                        type="text" value={comp.size ?? ''} placeholder="ex: 63×88mm"
+                        onChange={e => updateComponent(game.id, quote.id, comp.id, { size: e.target.value })}
+                        className="w-full px-1 py-0.5 border border-gray-200 rounded text-sm focus:outline-none focus:border-yellow-400 text-gray-500"
                       />
                     </td>
                     <td className="px-2 py-1">
@@ -172,32 +179,68 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
               })}
 
               {/* Subtotal / margin row */}
-              <tr className="bg-amber-50 text-xs italic text-gray-600 border-t border-amber-200">
-                <td className="px-2 py-1" colSpan={3}>
-                  Marge d'Incertitude {quote.uncertaintyMarginPercent}%
-                </td>
-                <td className="px-2 py-1 text-right">{fmt(fabPerUnit - compSubtotalEUR)}</td>
-                <td className="px-2 py-1 text-right">{fmt((fabPerUnit - compSubtotalEUR) * (1 + game.vatRate / 100))}</td>
-                <td></td>
-              </tr>
-              <tr className="bg-amber-100 font-bold text-sm border-t border-amber-300">
-                <td className="px-2 py-1.5" colSpan={3}>TOTAL Fabrication / unité</td>
-                <td className="px-2 py-1.5 text-right text-amber-800">{fmt(fabPerUnit)}</td>
-                <td className="px-2 py-1.5 text-right text-amber-700">{fmt(fabPerUnitTTC)}</td>
-                <td></td>
-              </tr>
-              <tr className="bg-amber-200 font-bold text-sm">
-                <td className="px-2 py-1.5" colSpan={3}>TOTAL Fabrication ({quote.quantity.toLocaleString('fr-FR')} unités)</td>
-                <td className="px-2 py-1.5 text-right text-amber-900">{fmt(fabTotal)}</td>
-                <td className="px-2 py-1.5 text-right text-amber-800">{fmt(fabTotalTTC)}</td>
-                <td></td>
-              </tr>
-              {/* USD subtotal info */}
-              <tr className="bg-gray-50 text-xs text-gray-400">
-                <td className="px-2 py-1" colSpan={6}>
-                  Sous-total USD : {fmtUSD(quote.components.reduce((s, c) => s + c.priceUSD * c.quantity, 0))} · Taux : {quote.dollarToEuroRate}
-                </td>
-              </tr>
+              {(() => {
+                const compSubtotal = quote.components.reduce((s, c) => s + c.priceUSD * c.quantity * quote.dollarToEuroRate, 0);
+                const compPerUnit = calcFabComponentsPerUnitEUR(quote);
+                const toolingEUR = calcFabToolingEUR(quote);
+                return (
+                  <>
+                    <tr className="bg-amber-50 text-xs italic text-gray-600 border-t border-amber-200">
+                      <td className="px-2 py-1" colSpan={4}>
+                        Marge d'Incertitude {quote.uncertaintyMarginPercent}%
+                      </td>
+                      <td className="px-2 py-1 text-right">{fmt(compPerUnit - compSubtotal)}</td>
+                      <td className="px-2 py-1 text-right">{fmt((compPerUnit - compSubtotal) * (1 + game.vatRate / 100))}</td>
+                      <td></td>
+                      <td></td>
+                    </tr>
+
+                    {/* Tooling row */}
+                    <tr className="bg-orange-50 border-t border-orange-200 text-xs">
+                      <td className="px-2 py-1.5 font-semibold text-orange-800" colSpan={3}>
+                        Outillage / Tooling (coût unique, non multiplié)
+                      </td>
+                      <td></td>
+                      <td className="px-2 py-1.5">
+                        <div className="flex items-center gap-1 justify-end">
+                          <input
+                            type="number" step="1" min="0"
+                            value={quote.toolingUSD || ''}
+                            onChange={e => update({ toolingUSD: parseFloat(e.target.value) || 0 })}
+                            className="w-24 px-1 py-0.5 border border-orange-200 rounded text-right text-sm focus:outline-none focus:border-orange-400"
+                            placeholder="0"
+                          />
+                          <span className="text-gray-400 text-xs">USD</span>
+                        </div>
+                      </td>
+                      <td className="px-2 py-1.5 text-right font-medium text-orange-700">{fmt(toolingEUR)}</td>
+                      <td className="px-2 py-1.5 text-right text-orange-600">{fmt(toolingEUR * (1 + game.vatRate / 100))}</td>
+                      <td></td>
+                    </tr>
+
+                    <tr className="bg-amber-100 font-bold text-sm border-t border-amber-300">
+                      <td className="px-2 py-1.5" colSpan={4}>TOTAL Fabrication / unité (amorti)</td>
+                      <td className="px-2 py-1.5 text-right text-amber-800">{fmt(fabPerUnit)}</td>
+                      <td className="px-2 py-1.5 text-right text-amber-700">{fmt(fabPerUnitTTC)}</td>
+                      <td></td>
+                      <td></td>
+                    </tr>
+                    <tr className="bg-amber-200 font-bold text-sm">
+                      <td className="px-2 py-1.5" colSpan={4}>TOTAL Fabrication ({quote.quantity.toLocaleString('fr-FR')} unités)</td>
+                      <td className="px-2 py-1.5 text-right text-amber-900">{fmt(fabTotal)}</td>
+                      <td className="px-2 py-1.5 text-right text-amber-800">{fmt(fabTotalTTC)}</td>
+                      <td></td>
+                      <td></td>
+                    </tr>
+                    {/* USD subtotal info */}
+                    <tr className="bg-gray-50 text-xs text-gray-400">
+                      <td className="px-2 py-1" colSpan={8}>
+                        Sous-total USD composants : {fmtUSD(quote.components.reduce((s, c) => s + c.priceUSD * c.quantity, 0))} · Taux : {quote.dollarToEuroRate}
+                      </td>
+                    </tr>
+                  </>
+                );
+              })()}
             </tbody>
           </table>
         </div>
