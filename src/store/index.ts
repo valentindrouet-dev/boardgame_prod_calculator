@@ -6,6 +6,16 @@ function uid(): string {
   return crypto.randomUUID();
 }
 
+function move<T>(arr: T[], id: string, direction: 'up' | 'down', key: keyof T = 'id' as keyof T): T[] {
+  const idx = arr.findIndex(item => (item[key] as unknown as string) === id);
+  if (idx === -1) return arr;
+  const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (newIdx < 0 || newIdx >= arr.length) return arr;
+  const result = [...arr];
+  [result[idx], result[newIdx]] = [result[newIdx], result[idx]];
+  return result;
+}
+
 interface GameStore {
   games: Game[];
   activeGameId: string | null;
@@ -18,6 +28,7 @@ interface GameStore {
   addDevItem: (gameId: string) => void;
   updateDevItem: (gameId: string, itemId: string, patch: Partial<DevelopmentItem>) => void;
   removeDevItem: (gameId: string, itemId: string) => void;
+  moveDevItem: (gameId: string, itemId: string, direction: 'up' | 'down') => void;
 
   // Factory Quotes
   addFactoryQuote: (gameId: string) => void;
@@ -28,11 +39,13 @@ interface GameStore {
   addComponent: (gameId: string, quoteId: string) => void;
   updateComponent: (gameId: string, quoteId: string, compId: string, patch: Partial<ManufacturingComponent>) => void;
   removeComponent: (gameId: string, quoteId: string, compId: string) => void;
+  moveComponent: (gameId: string, quoteId: string, compId: string, direction: 'up' | 'down') => void;
 
   // Logistics
   addLogisticsItem: (gameId: string, quoteId: string) => void;
   updateLogisticsItem: (gameId: string, quoteId: string, itemId: string, patch: Partial<LogisticsItem>) => void;
   removeLogisticsItem: (gameId: string, quoteId: string, itemId: string) => void;
+  moveLogisticsItem: (gameId: string, quoteId: string, itemId: string, direction: 'up' | 'down') => void;
 
   // Communication
   addCommItem: (gameId: string) => void;
@@ -125,6 +138,16 @@ export const useGameStore = create<GameStore>()(
           ),
         })),
 
+      moveDevItem: (gameId, itemId, direction) =>
+        set((s) => ({
+          games: s.games.map((g) =>
+            g.id !== gameId ? g : {
+              ...g,
+              developmentItems: move(g.developmentItems, itemId, direction),
+            }
+          ),
+        })),
+
       addFactoryQuote: (gameId) =>
         set((s) => ({
           games: s.games.map((g) =>
@@ -213,6 +236,21 @@ export const useGameStore = create<GameStore>()(
           ),
         })),
 
+      moveComponent: (gameId, quoteId, compId, direction) =>
+        set((s) => ({
+          games: s.games.map((g) =>
+            g.id !== gameId ? g : {
+              ...g,
+              factoryQuotes: g.factoryQuotes.map((q) =>
+                q.id !== quoteId ? q : {
+                  ...q,
+                  components: move(q.components, compId, direction),
+                }
+              )
+            }
+          ),
+        })),
+
       addLogisticsItem: (gameId, quoteId) =>
         set((s) => ({
           games: s.games.map((g) =>
@@ -254,6 +292,21 @@ export const useGameStore = create<GameStore>()(
                 q.id !== quoteId ? q : {
                   ...q,
                   logistics: q.logistics.filter((l) => l.id !== itemId)
+                }
+              )
+            }
+          ),
+        })),
+
+      moveLogisticsItem: (gameId, quoteId, itemId, direction) =>
+        set((s) => ({
+          games: s.games.map((g) =>
+            g.id !== gameId ? g : {
+              ...g,
+              factoryQuotes: g.factoryQuotes.map((q) =>
+                q.id !== quoteId ? q : {
+                  ...q,
+                  logistics: move(q.logistics, itemId, direction),
                 }
               )
             }

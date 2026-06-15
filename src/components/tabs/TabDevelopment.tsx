@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import type { Game, DevelopmentItem } from '../../types';
 import { useGameStore } from '../../store';
 import { calcDevTotalHT, calcDevTotalTTC, fmt } from '../../utils/calculations';
@@ -32,7 +32,7 @@ function TextInput({ value, onChange, placeholder = '', className = '' }: {
 }
 
 export function TabDevelopment({ game }: { game: Game }) {
-  const { addDevItem, updateDevItem, removeDevItem, updateGame } = useGameStore();
+  const { addDevItem, updateDevItem, removeDevItem, moveDevItem, updateGame } = useGameStore();
 
   function update(item: DevelopmentItem, patch: Partial<DevelopmentItem>) {
     const merged = { ...item, ...patch };
@@ -77,7 +77,7 @@ export function TabDevelopment({ game }: { game: Game }) {
               <th className="px-2 py-2 text-right w-24">HT total</th>
               <th className="px-2 py-2 text-right w-24">TTC total</th>
               <th className="px-2 py-2 text-left w-28">Notes (prix base)</th>
-              <th className="px-2 py-2 w-8"></th>
+              <th className="px-2 py-2 w-12"></th>
             </tr>
           </thead>
           <tbody>
@@ -119,13 +119,29 @@ export function TabDevelopment({ game }: { game: Game }) {
                   <td className="px-2 py-1">
                     <TextInput value={item.notes} onChange={v => update(item, { notes: v })} />
                   </td>
-                  <td className="px-2 py-1 text-center">
-                    <button
-                      className="text-red-400 hover:text-red-600 transition-colors"
-                      onClick={() => removeDevItem(game.id, item.id)}
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                  <td className="px-2 py-1">
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        className="text-gray-400 hover:text-gray-700 disabled:opacity-20 transition-colors"
+                        onClick={() => moveDevItem(game.id, item.id, 'up')}
+                        disabled={idx === 0}
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        className="text-gray-400 hover:text-gray-700 disabled:opacity-20 transition-colors"
+                        onClick={() => moveDevItem(game.id, item.id, 'down')}
+                        disabled={idx === game.developmentItems.length - 1}
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                      <button
+                        className="text-red-400 hover:text-red-600 transition-colors ml-1"
+                        onClick={() => removeDevItem(game.id, item.id)}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );

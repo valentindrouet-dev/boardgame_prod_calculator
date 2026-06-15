@@ -23,7 +23,7 @@ function NumInput({ value, onChange, step = '0.01', className = '' }: {
 }
 
 function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
-  const { updateFactoryQuote, removeFactoryQuote, addComponent, updateComponent, removeComponent, addLogisticsItem, updateLogisticsItem, removeLogisticsItem } = useGameStore();
+  const { updateFactoryQuote, removeFactoryQuote, addComponent, updateComponent, removeComponent, moveComponent, addLogisticsItem, updateLogisticsItem, removeLogisticsItem, moveLogisticsItem } = useGameStore();
   const [expanded, setExpanded] = useState(true);
 
   const update = (patch: Partial<FactoryQuote>) => updateFactoryQuote(game.id, quote.id, patch);
@@ -110,7 +110,7 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
                   <th className="px-2 py-1.5 text-center w-16">Qté</th>
                   <th className="px-2 py-1.5 text-right w-28">Prix $ (total)</th>
                   <th className="px-2 py-1.5 text-right w-28">Prix € (total)</th>
-                  <th className="w-8"></th>
+                  <th className="w-16"></th>
                 </tr>
               </thead>
               <tbody>
@@ -140,13 +140,25 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
                     <td className="px-2 py-1 text-right font-medium text-amber-700">
                       {fmt(comp.priceUSD * comp.quantity * quote.dollarToEuroRate)}
                     </td>
-                    <td className="px-2 py-1 text-center">
-                      <button
-                        className="text-red-400 hover:text-red-600"
-                        onClick={() => removeComponent(game.id, quote.id, comp.id)}
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                    <td className="px-2 py-1">
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          className="text-gray-400 hover:text-gray-700 disabled:opacity-20"
+                          onClick={() => moveComponent(game.id, quote.id, comp.id, 'up')}
+                          disabled={quote.components.indexOf(comp) === 0}
+                        ><ChevronUp size={13} /></button>
+                        <button
+                          className="text-gray-400 hover:text-gray-700 disabled:opacity-20"
+                          onClick={() => moveComponent(game.id, quote.id, comp.id, 'down')}
+                          disabled={quote.components.indexOf(comp) === quote.components.length - 1}
+                        ><ChevronDown size={13} /></button>
+                        <button
+                          className="text-red-400 hover:text-red-600 ml-0.5"
+                          onClick={() => removeComponent(game.id, quote.id, comp.id)}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -205,7 +217,7 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
                   <th className="px-2 py-1.5 text-left">Poste</th>
                   <th className="px-2 py-1.5 text-left">Description</th>
                   <th className="px-2 py-1.5 text-right w-28">Prix HT</th>
-                  <th className="w-8"></th>
+                  <th className="w-16"></th>
                 </tr>
               </thead>
               <tbody>
@@ -228,13 +240,23 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
                     <td className="px-2 py-1">
                       <NumInput value={item.priceHT} onChange={v => updateLogisticsItem(game.id, quote.id, item.id, { priceHT: v })} />
                     </td>
-                    <td className="px-2 py-1 text-center">
-                      <button
-                        className="text-red-400 hover:text-red-600"
-                        onClick={() => removeLogisticsItem(game.id, quote.id, item.id)}
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                    <td className="px-2 py-1">
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          className="text-gray-400 hover:text-gray-700 disabled:opacity-20"
+                          onClick={() => moveLogisticsItem(game.id, quote.id, item.id, 'up')}
+                          disabled={idx === 0}
+                        ><ChevronUp size={13} /></button>
+                        <button
+                          className="text-gray-400 hover:text-gray-700 disabled:opacity-20"
+                          onClick={() => moveLogisticsItem(game.id, quote.id, item.id, 'down')}
+                          disabled={idx === quote.logistics.length - 1}
+                        ><ChevronDown size={13} /></button>
+                        <button
+                          className="text-red-400 hover:text-red-600 ml-0.5"
+                          onClick={() => removeLogisticsItem(game.id, quote.id, item.id)}
+                        ><Trash2 size={12} /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
