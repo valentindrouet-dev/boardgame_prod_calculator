@@ -16,6 +16,14 @@ export interface ManufacturingComponent {
   description: string;
   quantity: number;
   priceUSD: number;
+  disabled?: boolean;
+}
+
+export interface FabricationLink {
+  id: string;
+  name: string;
+  url: string;
+  description: string;
 }
 
 export interface LogisticsItem {
@@ -79,6 +87,7 @@ export interface Game {
   communicationItems: CommunicationItem[];
   salesScenarios: SalesScenario[];
   gameComponents: GameComponent[];
+  fabricationLinks: FabricationLink[];
   createdAt: string;
   updatedAt: string;
 }

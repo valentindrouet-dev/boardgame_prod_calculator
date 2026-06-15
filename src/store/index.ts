@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Game, DevelopmentItem, FactoryQuote, ManufacturingComponent, LogisticsItem, CommunicationItem, SalesScenario, GameComponent } from '../types';
+import type { Game, DevelopmentItem, FactoryQuote, ManufacturingComponent, LogisticsItem, CommunicationItem, SalesScenario, GameComponent, FabricationLink } from '../types';
 
 function uid(): string {
   return crypto.randomUUID();
@@ -61,6 +61,11 @@ interface GameStore {
   addGameComponent: (gameId: string) => void;
   updateGameComponent: (gameId: string, compId: string, patch: Partial<GameComponent>) => void;
   removeGameComponent: (gameId: string, compId: string) => void;
+
+  // Fabrication Links
+  addFabricationLink: (gameId: string) => void;
+  updateFabricationLink: (gameId: string, linkId: string, patch: Partial<FabricationLink>) => void;
+  removeFabricationLink: (gameId: string, linkId: string) => void;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -84,6 +89,7 @@ export const useGameStore = create<GameStore>()(
           communicationItems: [],
           salesScenarios: [],
           gameComponents: [],
+          fabricationLinks: [],
           createdAt: now,
           updatedAt: now,
         };
@@ -403,6 +409,38 @@ export const useGameStore = create<GameStore>()(
             g.id !== gameId ? g : {
               ...g,
               gameComponents: (g.gameComponents ?? []).filter((c) => c.id !== compId)
+            }
+          ),
+        })),
+
+      addFabricationLink: (gameId) =>
+        set((s) => ({
+          games: s.games.map((g) =>
+            g.id !== gameId ? g : {
+              ...g,
+              fabricationLinks: [...(g.fabricationLinks ?? []), { id: uid(), name: '', url: '', description: '' }]
+            }
+          ),
+        })),
+
+      updateFabricationLink: (gameId, linkId, patch) =>
+        set((s) => ({
+          games: s.games.map((g) =>
+            g.id !== gameId ? g : {
+              ...g,
+              fabricationLinks: (g.fabricationLinks ?? []).map((l) =>
+                l.id !== linkId ? l : { ...l, ...patch }
+              )
+            }
+          ),
+        })),
+
+      removeFabricationLink: (gameId, linkId) =>
+        set((s) => ({
+          games: s.games.map((g) =>
+            g.id !== gameId ? g : {
+              ...g,
+              fabricationLinks: (g.fabricationLinks ?? []).filter((l) => l.id !== linkId)
             }
           ),
         })),

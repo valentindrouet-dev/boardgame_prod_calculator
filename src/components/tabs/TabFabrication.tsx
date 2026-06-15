@@ -1,4 +1,4 @@
-import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import type { Game, FactoryQuote } from '../../types';
 import { useGameStore } from '../../store';
@@ -115,15 +115,17 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
             </thead>
             <tbody>
               {quote.components.map((comp, idx) => {
-                const priceEUR = comp.priceUSD * comp.quantity * quote.dollarToEuroRate;
+                const active = !comp.disabled;
+                const priceEUR = active ? comp.priceUSD * comp.quantity * quote.dollarToEuroRate : 0;
                 const priceTTC = priceEUR * (1 + game.vatRate / 100);
+                const rowBase = active ? (idx % 2 === 0 ? 'bg-white' : 'bg-gray-50') : 'bg-gray-100 opacity-50';
                 return (
-                  <tr key={comp.id} className={`border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                  <tr key={comp.id} className={`border-b border-gray-100 ${rowBase}`}>
                     <td className="px-2 py-1">
                       <input
                         type="text" value={comp.name} placeholder="Nom..."
                         onChange={e => updateComponent(game.id, quote.id, comp.id, { name: e.target.value })}
-                        className="w-full px-1 py-0.5 border border-gray-200 rounded text-sm focus:outline-none focus:border-yellow-400"
+                        className={`w-full px-1 py-0.5 border border-gray-200 rounded text-sm focus:outline-none focus:border-yellow-400 ${!active ? 'line-through text-gray-400' : ''}`}
                       />
                     </td>
                     <td className="px-2 py-1">
@@ -154,10 +156,15 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
                         className="w-full px-1 py-0.5 border border-gray-200 rounded text-right text-sm focus:outline-none focus:border-yellow-400"
                       />
                     </td>
-                    <td className="px-2 py-1 text-right font-medium text-amber-700">{fmt(priceEUR)}</td>
-                    <td className="px-2 py-1 text-right text-amber-600">{fmt(priceTTC)}</td>
+                    <td className="px-2 py-1 text-right font-medium text-amber-700">{active ? fmt(priceEUR) : <span className="text-gray-300">—</span>}</td>
+                    <td className="px-2 py-1 text-right text-amber-600">{active ? fmt(priceTTC) : <span className="text-gray-300">—</span>}</td>
                     <td className="px-2 py-1">
                       <div className="flex items-center gap-0.5">
+                        <button
+                          title={active ? 'Désactiver (exclure du calcul)' : 'Activer'}
+                          className={`${active ? 'text-gray-400 hover:text-gray-700' : 'text-red-400 hover:text-red-600'}`}
+                          onClick={() => updateComponent(game.id, quote.id, comp.id, { disabled: !comp.disabled })}
+                        >{active ? <Eye size={13} /> : <EyeOff size={13} />}</button>
                         <button
                           className="text-gray-400 hover:text-gray-700 disabled:opacity-20"
                           onClick={() => moveComponent(game.id, quote.id, comp.id, 'up')}
@@ -235,7 +242,8 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
                     {/* USD subtotal info */}
                     <tr className="bg-gray-50 text-xs text-gray-400">
                       <td className="px-2 py-1" colSpan={8}>
-                        Sous-total USD composants : {fmtUSD(quote.components.reduce((s, c) => s + c.priceUSD * c.quantity, 0))} · Taux : {quote.dollarToEuroRate}
+                        Sous-total USD composants actifs : {fmtUSD(quote.components.filter(c => !c.disabled).reduce((s, c) => s + c.priceUSD * c.quantity, 0))} · Taux : {quote.dollarToEuroRate}
+                        {quote.components.some(c => c.disabled) && <span className="ml-2 text-red-300">({quote.components.filter(c => c.disabled).length} composant(s) désactivé(s))</span>}
                       </td>
                     </tr>
                   </>
@@ -380,6 +388,82 @@ function LogisticsSection({ game }: { game: Game }) {
   );
 }
 
+function LinksLibrary({ game }: { game: Game }) {
+  const { addFabricationLink, updateFabricationLink, removeFabricationLink } = useGameStore();
+  const links = game.fabricationLinks ?? [];
+
+  return (
+    <div className="bg-white rounded-lg shadow border border-gray-200">
+      <div className="bg-indigo-800 text-white px-4 py-3 rounded-t-lg flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h3 className="font-bold">Bibliothèque de liens</h3>
+          <span className="text-indigo-300 text-xs">— calculateurs, outils, devis usines</span>
+        </div>
+        <button
+          className="flex items-center gap-1 text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded transition-colors"
+          onClick={() => addFabricationLink(game.id)}
+        >
+          <Plus size={12} />
+          Ajouter lien
+        </button>
+      </div>
+
+      <div className="p-4">
+        {links.length === 0 && (
+          <p className="text-gray-400 text-sm text-center py-4">
+            Cliquez sur "+ Ajouter lien" pour sauvegarder vos outils et calculateurs de fabrication.
+          </p>
+        )}
+
+        <div className="space-y-2">
+          {links.map(link => (
+            <div key={link.id} className="flex items-center gap-2 group">
+              <input
+                type="text"
+                value={link.name}
+                placeholder="Nom (ex: Calculateur Cartamundi)"
+                onChange={e => updateFabricationLink(game.id, link.id, { name: e.target.value })}
+                className="w-40 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-indigo-400 font-medium"
+              />
+              <input
+                type="url"
+                value={link.url}
+                placeholder="https://..."
+                onChange={e => updateFabricationLink(game.id, link.id, { url: e.target.value })}
+                className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-indigo-400 text-blue-600"
+              />
+              <input
+                type="text"
+                value={link.description}
+                placeholder="Notes..."
+                onChange={e => updateFabricationLink(game.id, link.id, { description: e.target.value })}
+                className="w-48 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-indigo-400 text-gray-500"
+              />
+              {link.url && (
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-500 hover:text-indigo-700 shrink-0"
+                  title="Ouvrir"
+                >
+                  <ExternalLink size={15} />
+                </a>
+              )}
+              <button
+                className="text-red-400 hover:text-red-600 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => removeFabricationLink(game.id, link.id)}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function TabFabrication({ game }: { game: Game }) {
   const { addFactoryQuote } = useGameStore();
 
@@ -408,6 +492,10 @@ export function TabFabrication({ game }: { game: Game }) {
 
       <div className="mt-2">
         <LogisticsSection game={game} />
+      </div>
+
+      <div className="mt-4">
+        <LinksLibrary game={game} />
       </div>
     </div>
   );

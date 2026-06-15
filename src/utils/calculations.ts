@@ -25,7 +25,7 @@ export function calcDevPerUnit(game: Game, quote: FactoryQuote): number {
 }
 
 export function calcFabComponentsPerUnitEUR(quote: FactoryQuote): number {
-  const subtotal = quote.components.reduce((sum, c) => {
+  const subtotal = quote.components.filter(c => !c.disabled).reduce((sum, c) => {
     return sum + c.priceUSD * c.quantity * quote.dollarToEuroRate;
   }, 0);
   return subtotal * (1 + quote.uncertaintyMarginPercent / 100);
