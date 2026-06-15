@@ -87,7 +87,6 @@ export interface Game {
   communicationItems: CommunicationItem[];
   salesScenarios: SalesScenario[];
   gameComponents: GameComponent[];
-  fabricationLinks: FabricationLink[];
   createdAt: string;
   updatedAt: string;
 }

@@ -1,4 +1,4 @@
-import { Plus, Trash2, ChevronDown, ChevronUp, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import type { Game, FactoryQuote } from '../../types';
 import { useGameStore } from '../../store';
@@ -388,82 +388,6 @@ function LogisticsSection({ game }: { game: Game }) {
   );
 }
 
-function LinksLibrary({ game }: { game: Game }) {
-  const { addFabricationLink, updateFabricationLink, removeFabricationLink } = useGameStore();
-  const links = game.fabricationLinks ?? [];
-
-  return (
-    <div className="bg-white rounded-lg shadow border border-gray-200">
-      <div className="bg-indigo-800 text-white px-4 py-3 rounded-t-lg flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h3 className="font-bold">Bibliothèque de liens</h3>
-          <span className="text-indigo-300 text-xs">— calculateurs, outils, devis usines</span>
-        </div>
-        <button
-          className="flex items-center gap-1 text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded transition-colors"
-          onClick={() => addFabricationLink(game.id)}
-        >
-          <Plus size={12} />
-          Ajouter lien
-        </button>
-      </div>
-
-      <div className="p-4">
-        {links.length === 0 && (
-          <p className="text-gray-400 text-sm text-center py-4">
-            Cliquez sur "+ Ajouter lien" pour sauvegarder vos outils et calculateurs de fabrication.
-          </p>
-        )}
-
-        <div className="space-y-2">
-          {links.map(link => (
-            <div key={link.id} className="flex items-center gap-2 group">
-              <input
-                type="text"
-                value={link.name}
-                placeholder="Nom (ex: Calculateur Cartamundi)"
-                onChange={e => updateFabricationLink(game.id, link.id, { name: e.target.value })}
-                className="w-40 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-indigo-400 font-medium"
-              />
-              <input
-                type="url"
-                value={link.url}
-                placeholder="https://..."
-                onChange={e => updateFabricationLink(game.id, link.id, { url: e.target.value })}
-                className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-indigo-400 text-blue-600"
-              />
-              <input
-                type="text"
-                value={link.description}
-                placeholder="Notes..."
-                onChange={e => updateFabricationLink(game.id, link.id, { description: e.target.value })}
-                className="w-48 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-indigo-400 text-gray-500"
-              />
-              {link.url && (
-                <a
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-indigo-500 hover:text-indigo-700 shrink-0"
-                  title="Ouvrir"
-                >
-                  <ExternalLink size={15} />
-                </a>
-              )}
-              <button
-                className="text-red-400 hover:text-red-600 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => removeFabricationLink(game.id, link.id)}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function TabFabrication({ game }: { game: Game }) {
   const { addFactoryQuote } = useGameStore();
 
@@ -492,10 +416,6 @@ export function TabFabrication({ game }: { game: Game }) {
 
       <div className="mt-2">
         <LogisticsSection game={game} />
-      </div>
-
-      <div className="mt-4">
-        <LinksLibrary game={game} />
       </div>
     </div>
   );

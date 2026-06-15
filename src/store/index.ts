@@ -19,6 +19,7 @@ function move<T>(arr: T[], id: string, direction: 'up' | 'down', key: keyof T = 
 interface GameStore {
   games: Game[];
   activeGameId: string | null;
+  fabricationLinks: FabricationLink[];
   setActiveGame: (id: string) => void;
   addGame: (name: string) => void;
   removeGame: (id: string) => void;
@@ -62,10 +63,10 @@ interface GameStore {
   updateGameComponent: (gameId: string, compId: string, patch: Partial<GameComponent>) => void;
   removeGameComponent: (gameId: string, compId: string) => void;
 
-  // Fabrication Links
-  addFabricationLink: (gameId: string) => void;
-  updateFabricationLink: (gameId: string, linkId: string, patch: Partial<FabricationLink>) => void;
-  removeFabricationLink: (gameId: string, linkId: string) => void;
+  // Fabrication Links (global, not per-game)
+  addFabricationLink: () => void;
+  updateFabricationLink: (linkId: string, patch: Partial<FabricationLink>) => void;
+  removeFabricationLink: (linkId: string) => void;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -73,6 +74,7 @@ export const useGameStore = create<GameStore>()(
     (set) => ({
       games: [],
       activeGameId: null,
+      fabricationLinks: [],
 
       setActiveGame: (id) => set({ activeGameId: id }),
 
@@ -89,7 +91,6 @@ export const useGameStore = create<GameStore>()(
           communicationItems: [],
           salesScenarios: [],
           gameComponents: [],
-          fabricationLinks: [],
           createdAt: now,
           updatedAt: now,
         };
@@ -413,36 +414,19 @@ export const useGameStore = create<GameStore>()(
           ),
         })),
 
-      addFabricationLink: (gameId) =>
+      addFabricationLink: () =>
         set((s) => ({
-          games: s.games.map((g) =>
-            g.id !== gameId ? g : {
-              ...g,
-              fabricationLinks: [...(g.fabricationLinks ?? []), { id: uid(), name: '', url: '', description: '' }]
-            }
-          ),
+          fabricationLinks: [...s.fabricationLinks, { id: uid(), name: '', url: '', description: '' }]
         })),
 
-      updateFabricationLink: (gameId, linkId, patch) =>
+      updateFabricationLink: (linkId, patch) =>
         set((s) => ({
-          games: s.games.map((g) =>
-            g.id !== gameId ? g : {
-              ...g,
-              fabricationLinks: (g.fabricationLinks ?? []).map((l) =>
-                l.id !== linkId ? l : { ...l, ...patch }
-              )
-            }
-          ),
+          fabricationLinks: s.fabricationLinks.map((l) => l.id !== linkId ? l : { ...l, ...patch })
         })),
 
-      removeFabricationLink: (gameId, linkId) =>
+      removeFabricationLink: (linkId) =>
         set((s) => ({
-          games: s.games.map((g) =>
-            g.id !== gameId ? g : {
-              ...g,
-              fabricationLinks: (g.fabricationLinks ?? []).filter((l) => l.id !== linkId)
-            }
-          ),
+          fabricationLinks: s.fabricationLinks.filter((l) => l.id !== linkId)
         })),
     }),
     { name: 'bbg-calc-storage' }

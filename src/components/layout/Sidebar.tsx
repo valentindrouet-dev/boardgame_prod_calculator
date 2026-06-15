@@ -1,9 +1,14 @@
 import { useState } from 'react';
-import { Plus, Trash2, Gamepad2 } from 'lucide-react';
+import { Plus, Trash2, Gamepad2, ExternalLink } from 'lucide-react';
 import { useGameStore } from '../../store';
 
-export function Sidebar() {
-  const { games, activeGameId, setActiveGame, addGame, removeGame } = useGameStore();
+interface SidebarProps {
+  activePage: 'game' | 'links';
+  onNavigate: (page: 'game' | 'links') => void;
+}
+
+export function Sidebar({ activePage, onNavigate }: SidebarProps) {
+  const { games, activeGameId, setActiveGame, addGame, removeGame, fabricationLinks } = useGameStore();
   const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
 
@@ -12,6 +17,12 @@ export function Sidebar() {
     addGame(newName.trim());
     setNewName('');
     setAdding(false);
+    onNavigate('game');
+  }
+
+  function handleSelectGame(id: string) {
+    setActiveGame(id);
+    onNavigate('game');
   }
 
   return (
@@ -29,9 +40,9 @@ export function Sidebar() {
           <div
             key={game.id}
             className={`group flex items-center justify-between px-4 py-3 cursor-pointer transition-colors ${
-              game.id === activeGameId ? 'bg-gray-700 border-l-4 border-yellow-400' : 'hover:bg-gray-800'
+              game.id === activeGameId && activePage === 'game' ? 'bg-gray-700 border-l-4 border-yellow-400' : 'hover:bg-gray-800'
             }`}
-            onClick={() => setActiveGame(game.id)}
+            onClick={() => handleSelectGame(game.id)}
           >
             <span className="text-sm font-medium truncate">{game.name}</span>
             <button
@@ -42,6 +53,24 @@ export function Sidebar() {
             </button>
           </div>
         ))}
+      </div>
+
+      {/* Global links nav */}
+      <div className="border-t border-gray-700">
+        <button
+          className={`w-full flex items-center gap-2 px-4 py-3 text-sm transition-colors ${
+            activePage === 'links' ? 'bg-indigo-800 text-white border-l-4 border-indigo-400' : 'text-indigo-300 hover:bg-gray-800'
+          }`}
+          onClick={() => onNavigate('links')}
+        >
+          <ExternalLink size={15} />
+          <span>Bibliothèque de liens</span>
+          {fabricationLinks.length > 0 && (
+            <span className="ml-auto bg-indigo-700 text-indigo-200 text-xs px-1.5 py-0.5 rounded-full">
+              {fabricationLinks.length}
+            </span>
+          )}
+        </button>
       </div>
 
       <div className="p-3 border-t border-gray-700">
