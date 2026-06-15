@@ -353,6 +353,7 @@ export const useGameStore = create<GameStore>()(
                 unsoldPercent: 0,
                 authorRoyaltyPercent: 0,
                 includeDevelopmentCost: true,
+                includeCommunicationCost: true,
               }]
             }
           ),

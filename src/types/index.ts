@@ -65,6 +65,7 @@ export interface SalesScenario {
   unsoldPercent: number;
   authorRoyaltyPercent: number;
   includeDevelopmentCost: boolean;
+  includeCommunicationCost: boolean;
 }
 
 export interface GameComponent {

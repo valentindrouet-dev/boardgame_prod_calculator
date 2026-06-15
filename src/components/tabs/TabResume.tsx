@@ -1,8 +1,9 @@
 import type { Game } from '../../types';
 import {
-  calcDevPerUnit, calcFabPerUnitEUR, calcLogisticsPerUnit,
-  calcCostPerUnitHT, calcDevTotalHT, calcFabTotalHT, calcLogisticsTotalHT, calcCommTotalHT,
-  calcCommPerUnit, fmt
+  calcFabPerUnitEUR, calcFabTotalHT, calcLogisticsPerUnit,
+  calcCostPerUnitHT, calcDevTotalHT, calcFabToolingEUR, calcFabComponentsPerUnitEUR,
+  calcLogisticsTotalHT, calcCommTotalHT, calcCommPerUnit, calcDevPerUnit,
+  calcSales, fmt
 } from '../../utils/calculations';
 
 export function TabResume({ game }: { game: Game }) {
@@ -14,133 +15,144 @@ export function TabResume({ game }: { game: Game }) {
     );
   }
 
-  const rows = [
-    {
-      label: 'Développement / unité HT',
-      values: game.factoryQuotes.map(q => calcDevPerUnit(game, q)),
-      highlight: false,
-    },
-    {
-      label: 'Fabrication / unité HT',
-      values: game.factoryQuotes.map(q => calcFabPerUnitEUR(q)),
-      highlight: false,
-    },
-    {
-      label: 'Transport / unité HT',
-      values: game.factoryQuotes.map(q => calcLogisticsPerUnit(game, q)),
-      highlight: false,
-    },
-    {
-      label: 'Communication / unité HT',
-      values: game.factoryQuotes.map(q => calcCommPerUnit(game, q)),
-      highlight: false,
-    },
-    {
-      label: 'COÛT TOTAL / unité HT',
-      values: game.factoryQuotes.map(q => calcCostPerUnitHT(game, q, true)),
-      highlight: true,
-    },
-    {
-      label: 'COÛT TOTAL / unité TTC',
-      values: game.factoryQuotes.map(q => calcCostPerUnitHT(game, q, true) * (1 + game.vatRate / 100)),
-      highlight: true,
-    },
-    {
-      label: 'COÛT TOTAL (production)',
-      values: game.factoryQuotes.map(q => calcCostPerUnitHT(game, q, true) * q.quantity),
-      highlight: true,
-    },
-  ];
-
-  const totalsRows = [
-    { label: 'Développement total HT', value: calcDevTotalHT(game) },
-    { label: 'Transport total HT', value: calcLogisticsTotalHT(game) },
-    { label: 'Communication total HT', value: calcCommTotalHT(game) },
-  ];
-
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-bold text-gray-800">Résumé Comparatif</h2>
+      <h2 className="text-lg font-bold text-gray-800">Résumé</h2>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-800 text-white">
-              <th className="px-4 py-3 text-left w-56">Poste de coût</th>
-              {game.factoryQuotes.map(q => (
-                <th key={q.id} className="px-4 py-3 text-center">
-                  <div className="font-bold">{q.factoryName}</div>
-                  <div className="text-xs text-yellow-300 font-normal">{q.quantity.toLocaleString('fr-FR')} unités</div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={i} className={row.highlight ? 'bg-yellow-100 font-bold border-t-2 border-yellow-400' : (i % 2 === 0 ? 'bg-white' : 'bg-gray-50')}>
-                <td className="px-4 py-2 text-gray-700">{row.label}</td>
-                {row.values.map((v, j) => (
-                  <td key={j} className={`px-4 py-2 text-center ${row.highlight ? 'text-yellow-800 text-base' : 'text-gray-800'}`}>
-                    {fmt(v)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Per-factory logistics */}
-      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.min(game.factoryQuotes.length, 3)}, 1fr)` }}>
-        {game.factoryQuotes.map(q => (
-          <div key={q.id} className="bg-white rounded-lg shadow p-4 border-t-4 border-yellow-400">
-            <h3 className="font-bold text-gray-800 mb-3">{q.factoryName} — {q.quantity.toLocaleString('fr-FR')} unités</h3>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Développement</span>
-                <span>{fmt(calcDevPerUnit(game, q))}/u · {fmt(calcDevTotalHT(game))}</span>
+      {/* Per-factory cost cards */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Coûts par usine</h3>
+        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.min(game.factoryQuotes.length, 3)}, 1fr)` }}>
+          {game.factoryQuotes.map(q => {
+            const compPerUnit = calcFabComponentsPerUnitEUR(q);
+            const toolingEUR = calcFabToolingEUR(q);
+            const fabPerUnit = calcFabPerUnitEUR(q);
+            const logPerUnit = calcLogisticsPerUnit(game, q);
+            const devPerUnit = calcDevPerUnit(game, q);
+            const commPerUnit = calcCommPerUnit(game, q);
+            const totalPerUnit = calcCostPerUnitHT(game, q, true, true);
+            void fabPerUnit;
+            return (
+              <div key={q.id} className="bg-white rounded-lg shadow p-4 border-t-4 border-yellow-400">
+                <h3 className="font-bold text-gray-800 mb-3">{q.factoryName} — {q.quantity.toLocaleString('fr-FR')} unités</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Développement</span>
+                    <span>{fmt(devPerUnit)}/u</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Composants (avec marge)</span>
+                    <span>{fmt(compPerUnit)}/u</span>
+                  </div>
+                  {toolingEUR > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Outillage (amorti)</span>
+                      <span>{fmt(toolingEUR / (q.quantity || 1))}/u</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Transport</span>
+                    <span>{fmt(logPerUnit)}/u</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Communication</span>
+                    <span>{fmt(commPerUnit)}/u</span>
+                  </div>
+                  <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between font-bold text-yellow-800">
+                    <span>TOTAL / unité HT</span>
+                    <span className="text-lg">{fmt(totalPerUnit)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>TOTAL / unité TTC</span>
+                    <span className="font-semibold">{fmt(totalPerUnit * (1 + game.vatRate / 100))}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>TOTAL fabrication</span>
+                    <span className="font-semibold">{fmt(calcFabTotalHT(q))}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Fabrication</span>
-                <span>{fmt(calcFabPerUnitEUR(q))}/u · {fmt(calcFabTotalHT(q))}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Transport</span>
-                <span>{fmt(calcLogisticsPerUnit(game, q))}/u · {fmt(calcLogisticsTotalHT(game))}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Communication</span>
-                <span>{fmt(calcCommPerUnit(game, q))}/u · {fmt(calcCommTotalHT(game))}</span>
-              </div>
-              <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between font-bold text-yellow-800">
-                <span>TOTAL / unité HT</span>
-                <span className="text-lg">{fmt(calcCostPerUnitHT(game, q, true))}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>TOTAL / unité TTC</span>
-                <span className="font-semibold">{fmt(calcCostPerUnitHT(game, q, true) * (1 + game.vatRate / 100))}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>TOTAL production</span>
-                <span className="font-semibold">{fmt(calcCostPerUnitHT(game, q, true) * q.quantity)}</span>
-              </div>
-            </div>
-          </div>
-        ))}
+            );
+          })}
+        </div>
       </div>
 
       {/* Fixed costs */}
       <div className="bg-white rounded-lg shadow p-4">
-        <h3 className="font-semibold text-gray-700 mb-3">Coûts fixes (indépendants de l'usine)</h3>
-        <div className="flex gap-8 text-sm">
-          {totalsRows.map((r, i) => (
-            <div key={i} className="flex gap-2">
-              <span className="text-gray-600">{r.label} :</span>
-              <span className="font-semibold">{fmt(r.value)}</span>
-            </div>
-          ))}
+        <h3 className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">Coûts fixes (communs à toutes les usines)</h3>
+        <div className="flex flex-wrap gap-8 text-sm">
+          <div className="flex gap-2">
+            <span className="text-gray-600">Développement total HT :</span>
+            <span className="font-semibold">{fmt(calcDevTotalHT(game))}</span>
+          </div>
+          <div className="flex gap-2">
+            <span className="text-gray-600">Transport total HT :</span>
+            <span className="font-semibold">{fmt(calcLogisticsTotalHT(game))}</span>
+          </div>
+          <div className="flex gap-2">
+            <span className="text-gray-600">Communication total HT :</span>
+            <span className="font-semibold">{fmt(calcCommTotalHT(game))}</span>
+          </div>
         </div>
       </div>
+
+      {/* Sales scenarios summary */}
+      {game.salesScenarios.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Scénarios de vente</h3>
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-purple-800 text-white text-xs">
+                  <th className="px-4 py-2 text-left">Scénario</th>
+                  <th className="px-4 py-2 text-left">Usine</th>
+                  <th className="px-4 py-2 text-right">Coût/u HT</th>
+                  <th className="px-4 py-2 text-right">PVC HT</th>
+                  <th className="px-4 py-2 text-right">Ventes HT</th>
+                  <th className="px-4 py-2 text-right">Coût total</th>
+                  <th className="px-4 py-2 text-right">Marge Brute</th>
+                  <th className="px-4 py-2 text-right">Marge Finale</th>
+                  <th className="px-4 py-2 text-center text-xs font-normal">Dév / Comm</th>
+                </tr>
+              </thead>
+              <tbody>
+                {game.salesScenarios.map((scenario, idx) => {
+                  const calc = calcSales(game, idx);
+                  const quote = game.factoryQuotes.find(q => q.id === scenario.factoryQuoteId);
+                  if (!calc || !quote) return null;
+                  const isPositive = calc.totalMarginMinusAuthor >= 0;
+                  const inclDev = scenario.includeDevelopmentCost;
+                  const inclComm = scenario.includeCommunicationCost ?? true;
+                  return (
+                    <tr key={scenario.id} className={`border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className="px-4 py-2.5 font-semibold text-purple-800">{scenario.name}</td>
+                      <td className="px-4 py-2.5 text-gray-600 text-xs">
+                        {quote.factoryName}
+                        <br /><span className="text-gray-400">{quote.quantity.toLocaleString('fr-FR')} u.</span>
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-red-600 font-medium">{fmt(calc.costPerUnitHT)}</td>
+                      <td className="px-4 py-2.5 text-right">{fmt(scenario.pvcHT)}</td>
+                      <td className="px-4 py-2.5 text-right">{fmt(calc.totalVentesHT)}</td>
+                      <td className="px-4 py-2.5 text-right text-red-500">−{fmt(calc.totalCost)}</td>
+                      <td className={`px-4 py-2.5 text-right font-semibold ${calc.totalMarginHT >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                        {fmt(calc.totalMarginHT)}
+                      </td>
+                      <td className={`px-4 py-2.5 text-right font-bold text-base ${isPositive ? 'text-green-700' : 'text-red-700'}`}>
+                        {fmt(calc.totalMarginMinusAuthor)}
+                      </td>
+                      <td className="px-4 py-2.5 text-center text-xs">
+                        <span className={inclDev ? 'text-green-600' : 'text-gray-300'}>Dév</span>
+                        <span className="text-gray-300 mx-1">/</span>
+                        <span className={inclComm ? 'text-green-600' : 'text-gray-300'}>Comm</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -71,10 +71,12 @@ export function calcCommPerUnit(game: Game, quote: FactoryQuote): number {
 export function calcCostPerUnitHT(
   game: Game,
   quote: FactoryQuote,
-  includeDev: boolean
+  includeDev: boolean,
+  includeComm = true
 ): number {
   const dev = includeDev ? calcDevPerUnit(game, quote) : 0;
-  return dev + calcFabPerUnitEUR(quote) + calcLogisticsPerUnit(game, quote) + calcCommPerUnit(game, quote);
+  const comm = includeComm ? calcCommPerUnit(game, quote) : 0;
+  return dev + calcFabPerUnitEUR(quote) + calcLogisticsPerUnit(game, quote) + comm;
 }
 
 export interface SalesCalc {
@@ -114,7 +116,7 @@ export function calcSales(game: Game, scenarioIndex: number): SalesCalc | null {
   if (!quote) return null;
 
   const vatMult = 1 + game.vatRate / 100;
-  const costPerUnitHT = calcCostPerUnitHT(game, quote, scenario.includeDevelopmentCost);
+  const costPerUnitHT = calcCostPerUnitHT(game, quote, scenario.includeDevelopmentCost, scenario.includeCommunicationCost ?? true);
   const costPerUnitTTC = costPerUnitHT * vatMult;
 
   const pvcTTC = scenario.pvcHT * vatMult;

@@ -79,15 +79,27 @@ function ScenarioCard({ game, scenario }: { game: Game; scenario: SalesScenario 
           </label>
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
-            id={`dev-${scenario.id}`}
-            checked={scenario.includeDevelopmentCost}
-            onChange={e => update({ includeDevelopmentCost: e.target.checked })}
-            className="rounded"
-          />
-          <label htmlFor={`dev-${scenario.id}`} className="text-gray-600">Inclure Développement</label>
+        <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id={`dev-${scenario.id}`}
+              checked={scenario.includeDevelopmentCost}
+              onChange={e => update({ includeDevelopmentCost: e.target.checked })}
+              className="rounded"
+            />
+            <label htmlFor={`dev-${scenario.id}`} className="text-gray-600">Inclure Développement</label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id={`comm-${scenario.id}`}
+              checked={scenario.includeCommunicationCost ?? true}
+              onChange={e => update({ includeCommunicationCost: e.target.checked })}
+              className="rounded"
+            />
+            <label htmlFor={`comm-${scenario.id}`} className="text-gray-600">Inclure Communication</label>
+          </div>
         </div>
 
         {calc && selectedQuote && (
