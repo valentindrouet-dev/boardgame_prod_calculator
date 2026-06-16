@@ -143,10 +143,11 @@ function GameCard({ game, onOpen }: { game: Game; onOpen: () => void }) {
 function GlobalTimeline({ games }: { games: Game[] }) {
   const entries = games.flatMap(g => {
     const milestones = buildPaymentMilestones(g);
+    const vatMult = 1 + g.vatRate / 100;
     return milestones.flatMap(m =>
       m.installments
         .filter(i => i.date)
-        .map(i => ({ gameName: g.name, sourceType: m.sourceType, label: i.label, amount: i.amount, date: i.date as string, paid: i.paid }))
+        .map(i => ({ gameName: g.name, sourceType: m.sourceType, label: i.label, amount: i.amount, amountTTC: i.amount * vatMult, date: i.date as string, paid: i.paid }))
     );
   });
 
@@ -171,14 +172,15 @@ function GlobalTimeline({ games }: { games: Game[] }) {
   const groups = Array.from(groupsMap.entries())
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([date, dateEntries]) => {
-      const byGame = new Map<string, { gameName: string; amount: number; paid: boolean }>();
+      const byGame = new Map<string, { gameName: string; amount: number; amountTTC: number; paid: boolean }>();
       dateEntries.forEach(e => {
         const existing = byGame.get(e.gameName);
         if (existing) {
           existing.amount += e.amount;
+          existing.amountTTC += e.amountTTC;
           existing.paid = existing.paid && e.paid;
         } else {
-          byGame.set(e.gameName, { gameName: e.gameName, amount: e.amount, paid: e.paid });
+          byGame.set(e.gameName, { gameName: e.gameName, amount: e.amount, amountTTC: e.amountTTC, paid: e.paid });
         }
       });
       return {
@@ -186,6 +188,7 @@ function GlobalTimeline({ games }: { games: Game[] }) {
         entries: Array.from(byGame.values()),
         events: eventsByMonth.get(date) ?? [],
         monthTotal: dateEntries.reduce((s, e) => s + e.amount, 0),
+        monthTotalTTC: dateEntries.reduce((s, e) => s + e.amountTTC, 0),
       };
     });
 
@@ -205,12 +208,14 @@ function GlobalTimeline({ games }: { games: Game[] }) {
       <div className="space-y-4">
         {fiscalYears.map(fy => {
           const fyTotal = fy.groups.reduce((s, g) => s + g.monthTotal, 0);
+          const fyTotalTTC = fy.groups.reduce((s, g) => s + g.monthTotalTTC, 0);
           return (
             <div key={fy.label} className="bg-gray-50 rounded-lg border border-gray-200 p-3">
               <div className="flex items-center justify-between mb-3 bg-gray-800 text-white rounded px-3 py-2">
                 <h4 className="text-xs font-bold uppercase tracking-wide">{fy.label}</h4>
                 <span className="text-sm">
                   Total année : <span className="font-bold text-yellow-400">{fmt(fyTotal)}</span> HT
+                  <span className="text-gray-400 ml-1.5">· {fmt(fyTotalTTC)} TTC</span>
                 </span>
               </div>
               <div className="relative grid gap-2 pt-3 items-stretch" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))' }}>
