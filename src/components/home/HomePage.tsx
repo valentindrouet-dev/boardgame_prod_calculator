@@ -214,6 +214,20 @@ export function HomePage({ onOpenGame }: { onOpenGame: (id: string) => void }) {
               </div>
             </div>
 
+            {/* Game cards */}
+            <div>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Projets</h2>
+              <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>
+                {games.map(game => (
+                  <GameCard
+                    key={game.id}
+                    game={game}
+                    onOpen={() => onOpenGame(game.id)}
+                  />
+                ))}
+              </div>
+            </div>
+
             {/* Cross-project cost/unit comparison */}
             {allQuoteRows.length > 0 && (
               <div>
@@ -246,20 +260,6 @@ export function HomePage({ onOpenGame }: { onOpenGame: (id: string) => void }) {
                 </div>
               </div>
             )}
-
-            {/* Game cards */}
-            <div>
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Projets</h2>
-              <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>
-                {games.map(game => (
-                  <GameCard
-                    key={game.id}
-                    game={game}
-                    onOpen={() => onOpenGame(game.id)}
-                  />
-                ))}
-              </div>
-            </div>
           </>
         )}
       </div>

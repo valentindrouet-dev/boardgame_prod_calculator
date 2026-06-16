@@ -8,8 +8,9 @@ import { TabFabrication } from '../tabs/TabFabrication';
 import { TabCommunication } from '../tabs/TabCommunication';
 import { TabResume } from '../tabs/TabResume';
 import { TabVentes } from '../tabs/TabVentes';
+import { TabChronologie } from '../tabs/TabChronologie';
 
-const TABS = ['Résumé', 'Développement', 'Fabrication', 'Communication', 'Ventes'] as const;
+const TABS = ['Résumé', 'Développement', 'Fabrication', 'Communication', 'Ventes', 'Chronologie'] as const;
 type Tab = typeof TABS[number];
 
 function HTTCConverter({ vatRate }: { vatRate: number }) {
@@ -151,6 +152,7 @@ export function GameDetail({ game }: { game: Game }) {
         {tab === 'Fabrication' && <TabFabrication game={game} />}
         {tab === 'Communication' && <TabCommunication game={game} />}
         {tab === 'Ventes' && <TabVentes game={game} />}
+        {tab === 'Chronologie' && <TabChronologie game={game} />}
       </div>
     </div>
   );

@@ -68,6 +68,23 @@ export interface SalesScenario {
   includeCommunicationCost: boolean;
 }
 
+export interface PaymentInstallment {
+  id: string;
+  label: string;
+  amount: number;
+  date: string | null;
+  paid: boolean;
+}
+
+export interface PaymentMilestone {
+  id: string;
+  sourceType: 'dev' | 'fabrication' | 'logistics' | 'communication';
+  sourceId: string;
+  label: string;
+  totalAmount: number;
+  installments: PaymentInstallment[];
+}
+
 export interface GameComponent {
   id: string;
   name: string;
@@ -89,6 +106,7 @@ export interface Game {
   salesScenarios: SalesScenario[];
   gameComponents: GameComponent[];
   selectedFactoryQuoteId?: string;
+  paymentSchedule?: PaymentMilestone[];
   createdAt: string;
   updatedAt: string;
 }

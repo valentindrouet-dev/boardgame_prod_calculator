@@ -1,4 +1,4 @@
-import type { Game, FactoryQuote } from '../types';
+import type { Game, FactoryQuote, PaymentMilestone, PaymentInstallment } from '../types';
 
 export function fmt(n: number): string {
   const decimals = Math.abs(n) < 100 ? 2 : 0;
@@ -164,4 +164,75 @@ export function calcSales(game: Game, scenarioIndex: number): SalesCalc | null {
     totalVentesHT, totalVentesTTC,
     totalMarginHT, authorRoyaltyTotal, totalMarginMinusAuthor, totalCost
   };
+}
+
+export interface PaymentSource {
+  sourceType: PaymentMilestone['sourceType'];
+  sourceId: string;
+  label: string;
+  amount: number;
+}
+
+export function getPaymentSources(game: Game): PaymentSource[] {
+  const sources: PaymentSource[] = [];
+
+  game.developmentItems.forEach(item => {
+    const amount = item.htPerUnit * item.quantity * (1 + game.developmentSafetyMarginPercent / 100);
+    if (amount !== 0) {
+      sources.push({ sourceType: 'dev', sourceId: item.id, label: `Développement - ${item.name}`, amount });
+    }
+  });
+
+  const selectedQuote = game.factoryQuotes.find(q => q.id === game.selectedFactoryQuoteId) ?? game.factoryQuotes[0];
+  if (selectedQuote) {
+    sources.push({
+      sourceType: 'fabrication',
+      sourceId: selectedQuote.id,
+      label: `Fabrication - ${selectedQuote.factoryName}`,
+      amount: calcFabTotalHT(selectedQuote),
+    });
+  }
+
+  (game.logistics ?? []).forEach(item => {
+    const amount = item.priceHT * (1 + (game.logisticsSafetyMarginPercent ?? 20) / 100);
+    if (amount !== 0) {
+      sources.push({ sourceType: 'logistics', sourceId: item.id, label: `Transport - ${item.name}`, amount });
+    }
+  });
+
+  game.communicationItems.forEach(item => {
+    const amount = item.monthlyPriceHT * item.months * (1 + item.safetyMarginPercent / 100);
+    if (amount !== 0) {
+      sources.push({ sourceType: 'communication', sourceId: item.id, label: `Communication - ${item.name}`, amount });
+    }
+  });
+
+  return sources;
+}
+
+export function buildPaymentMilestones(game: Game): PaymentMilestone[] {
+  const sources = getPaymentSources(game);
+  const existing = game.paymentSchedule ?? [];
+
+  return sources.map(source => {
+    const found = existing.find(m => m.sourceId === source.sourceId && m.sourceType === source.sourceType);
+    if (found) {
+      return { ...found, label: source.label, totalAmount: source.amount };
+    }
+    const installment: PaymentInstallment = {
+      id: `${source.sourceId}-default`,
+      label: 'Paiement complet',
+      amount: source.amount,
+      date: null,
+      paid: false,
+    };
+    return {
+      id: source.sourceId,
+      sourceType: source.sourceType,
+      sourceId: source.sourceId,
+      label: source.label,
+      totalAmount: source.amount,
+      installments: [installment],
+    };
+  });
 }
