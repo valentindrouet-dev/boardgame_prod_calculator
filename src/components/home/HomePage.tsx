@@ -1,7 +1,7 @@
 import type { Game } from '../../types';
 import { useGameStore } from '../../store';
 import { calcSales, calcCostPerUnitHT, calcDevTotalHT, calcFabTotalHT, calcLogisticsTotalHT, calcCommTotalHT, buildPaymentMilestones, fmt } from '../../utils/calculations';
-import { formatMonth, getFiscalYearKey, sourceColor } from '../../utils/timeline';
+import { formatMonth, getFiscalYearKey } from '../../utils/timeline';
 
 function getSelectedQuote(game: Game) {
   if (game.factoryQuotes.length === 0) return null;
@@ -170,12 +170,24 @@ function GlobalTimeline({ games }: { games: Game[] }) {
 
   const groups = Array.from(groupsMap.entries())
     .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([date, dateEntries]) => ({
-      date,
-      entries: dateEntries,
-      events: eventsByMonth.get(date) ?? [],
-      monthTotal: dateEntries.reduce((s, e) => s + e.amount, 0),
-    }));
+    .map(([date, dateEntries]) => {
+      const byGame = new Map<string, { gameName: string; amount: number; paid: boolean }>();
+      dateEntries.forEach(e => {
+        const existing = byGame.get(e.gameName);
+        if (existing) {
+          existing.amount += e.amount;
+          existing.paid = existing.paid && e.paid;
+        } else {
+          byGame.set(e.gameName, { gameName: e.gameName, amount: e.amount, paid: e.paid });
+        }
+      });
+      return {
+        date,
+        entries: Array.from(byGame.values()),
+        events: eventsByMonth.get(date) ?? [],
+        monthTotal: dateEntries.reduce((s, e) => s + e.amount, 0),
+      };
+    });
 
   const fiscalYearsMap = new Map<string, { label: string; groups: typeof groups }>();
   groups.forEach(group => {
@@ -217,10 +229,7 @@ function GlobalTimeline({ games }: { games: Game[] }) {
                           ))}
                           {group.entries.map((e, i) => (
                             <div key={i} className={`flex items-center justify-between gap-1 ${e.paid ? 'text-green-600' : 'text-gray-600'}`}>
-                              <span className="flex items-center gap-1 min-w-0">
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sourceColor(e.sourceType).dot}`} />
-                                <span className="truncate" title={`${e.gameName} — ${e.label}`}>{e.gameName}</span>
-                              </span>
+                              <span className="truncate" title={e.gameName}>{e.gameName}</span>
                               <span className="font-medium whitespace-nowrap">{fmt(e.amount)}</span>
                             </div>
                           ))}
