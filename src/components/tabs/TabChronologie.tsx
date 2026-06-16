@@ -8,6 +8,14 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function formatMonth(value: string): string {
+  const [year, month] = value.split('-');
+  if (!year || !month) return value;
+  const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+  const label = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 export function TabChronologie({ game }: { game: Game }) {
   const { updateGame } = useGameStore();
   const milestones = useMemo(() => buildPaymentMilestones(game), [game]);
@@ -52,12 +60,21 @@ export function TabChronologie({ game }: { game: Game }) {
     .filter(i => i.date)
     .sort((a, b) => (a.date! < b.date! ? -1 : 1));
 
+  // Group entries by month for the timeline frieze, with running cumulative treasury
+  const groupsMap = new Map<string, typeof timelineEntries>();
+  timelineEntries.forEach(entry => {
+    const key = entry.date!;
+    if (!groupsMap.has(key)) groupsMap.set(key, []);
+    groupsMap.get(key)!.push(entry);
+  });
+
   let cumulative = 0;
   let cumulativeTTC = 0;
-  const timelineWithCumulative = timelineEntries.map(entry => {
-    cumulative += entry.amount;
-    cumulativeTTC += entry.amount * vatMult;
-    return { ...entry, cumulative, cumulativeTTC };
+  const timelineGroups = Array.from(groupsMap.entries()).map(([date, entries]) => {
+    const monthTotal = entries.reduce((s, e) => s + e.amount, 0);
+    cumulative += monthTotal;
+    cumulativeTTC += monthTotal * vatMult;
+    return { date, entries, monthTotal, monthTotalTTC: monthTotal * vatMult, cumulative, cumulativeTTC };
   });
 
   const undatedTotal = milestones
@@ -129,7 +146,7 @@ export function TabChronologie({ game }: { game: Game }) {
                       <td className="px-3 py-1.5 text-right text-gray-500">{fmt(inst.amount * vatMult)}</td>
                       <td className="px-3 py-1.5">
                         <input
-                          type="date"
+                          type="month"
                           value={inst.date ?? ''}
                           onChange={e => updateInstallment(m, inst.id, { date: e.target.value || null })}
                           className="w-full px-1 py-0.5 border border-gray-200 rounded text-sm focus:outline-none focus:border-yellow-400"
@@ -182,34 +199,45 @@ export function TabChronologie({ game }: { game: Game }) {
       {/* Timeline */}
       <div>
         <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Frise chronologique</h3>
-        {timelineWithCumulative.length === 0 ? (
-          <p className="text-gray-400 text-sm">Aucune échéance datée. Renseignez une date de paiement ci-dessus pour la voir apparaître ici.</p>
+        {timelineGroups.length === 0 ? (
+          <p className="text-gray-400 text-sm">Aucune échéance datée. Renseignez un mois de paiement ci-dessus pour la voir apparaître ici.</p>
         ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-gray-700 text-white text-xs">
-                  <th className="px-3 py-2 text-left">Date</th>
-                  <th className="px-3 py-2 text-left">Étape</th>
-                  <th className="px-3 py-2 text-right">Montant HT</th>
-                  <th className="px-3 py-2 text-right">Montant TTC</th>
-                  <th className="px-3 py-2 text-right">Trésorerie cumulée HT</th>
-                  <th className="px-3 py-2 text-right">Trésorerie cumulée TTC</th>
-                </tr>
-              </thead>
-              <tbody>
-                {timelineWithCumulative.map((entry, i) => (
-                  <tr key={entry.id} className={`border-b border-gray-100 ${entry.paid ? 'bg-green-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                    <td className="px-3 py-1.5 font-medium text-gray-700">{entry.date}</td>
-                    <td className="px-3 py-1.5 text-gray-600">{entry.milestoneLabel} — {entry.label}</td>
-                    <td className="px-3 py-1.5 text-right font-semibold">{fmt(entry.amount)}</td>
-                    <td className="px-3 py-1.5 text-right text-gray-500">{fmt(entry.amount * vatMult)}</td>
-                    <td className="px-3 py-1.5 text-right text-yellow-700 font-bold">{fmt(entry.cumulative)}</td>
-                    <td className="px-3 py-1.5 text-right text-yellow-600">{fmt(entry.cumulativeTTC)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="overflow-x-auto pb-2">
+            <div className="relative flex items-start gap-8 px-2 pt-3 min-w-max">
+              <div className="absolute left-2 right-2 top-3 h-0.5 bg-gray-300" />
+              {timelineGroups.map(group => {
+                const allPaid = group.entries.every(e => e.paid);
+                return (
+                  <div key={group.date} className="relative flex flex-col items-center w-52 flex-shrink-0">
+                    <div className={`w-3.5 h-3.5 rounded-full border-2 border-white z-10 ${allPaid ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    <div className="text-xs font-bold text-gray-700 mt-2">{formatMonth(group.date)}</div>
+                    <div className="bg-white rounded-lg shadow border border-gray-200 p-2.5 mt-2 w-full text-xs space-y-1.5">
+                      {group.entries.map(e => (
+                        <div key={e.id} className={`flex items-center justify-between gap-1 ${e.paid ? 'text-green-600' : 'text-gray-600'}`}>
+                          <span className="truncate" title={`${e.milestoneLabel} — ${e.label}`}>{e.label}</span>
+                          <span className="font-medium whitespace-nowrap">{fmt(e.amount)}</span>
+                        </div>
+                      ))}
+                      <div className="border-t border-gray-100 pt-1.5 mt-1.5">
+                        <div className="flex items-center justify-between font-bold text-gray-800">
+                          <span>Total mois</span>
+                          <span>{fmt(group.monthTotal)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-gray-400">
+                          <span>TTC</span>
+                          <span>{fmt(group.monthTotalTTC)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-gray-800 text-white rounded p-1.5 mt-1.5 w-full text-xs text-center">
+                      <div className="text-gray-300">Trésorerie cumulée</div>
+                      <div className="font-bold text-yellow-400">{fmt(group.cumulative)} HT</div>
+                      <div className="text-gray-400">{fmt(group.cumulativeTTC)} TTC</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
         {undatedTotal > 0 && (
