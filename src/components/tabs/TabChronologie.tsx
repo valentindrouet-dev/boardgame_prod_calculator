@@ -139,7 +139,7 @@ export function TabChronologie({ game }: { game: Game }) {
                           type="number"
                           step="0.01"
                           value={inst.amount || ''}
-                          onChange={e => updateInstallment(m, inst.id, { amount: parseFloat(e.target.value) || 0 })}
+                          onChange={e => updateInstallment(m, inst.id, { amount: Math.round((parseFloat(e.target.value) || 0) * 100) / 100 })}
                           className="w-full px-1 py-0.5 border border-gray-200 rounded text-right text-sm focus:outline-none focus:border-yellow-400"
                         />
                       </td>
@@ -147,8 +147,8 @@ export function TabChronologie({ game }: { game: Game }) {
                         <input
                           type="number"
                           step="0.01"
-                          value={(inst.amount * vatMult) || ''}
-                          onChange={e => updateInstallment(m, inst.id, { amount: (parseFloat(e.target.value) || 0) / vatMult })}
+                          value={Math.round(inst.amount * vatMult * 100) / 100 || ''}
+                          onChange={e => updateInstallment(m, inst.id, { amount: Math.round(((parseFloat(e.target.value) || 0) / vatMult) * 100) / 100 })}
                           className="w-full px-1 py-0.5 border border-gray-200 rounded text-right text-sm text-gray-500 focus:outline-none focus:border-yellow-400"
                         />
                       </td>
