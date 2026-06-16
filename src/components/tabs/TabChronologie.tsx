@@ -20,7 +20,18 @@ function formatMonth(value: string): string {
 function getFiscalYearKey(value: string): { key: string; label: string } {
   const [year, month] = value.split('-').map(Number);
   const startYear = month >= 9 ? year : year - 1;
-  return { key: String(startYear), label: `Année fiscale ${startYear}-${startYear + 1} (sept. à août)` };
+  return { key: String(startYear), label: `Année ${startYear}-${startYear + 1} (sept. à août)` };
+}
+
+const SOURCE_COLORS: Record<string, { dot: string; text: string; bg: string }> = {
+  dev: { dot: 'bg-yellow-400', text: 'text-yellow-700', bg: 'bg-yellow-50' },
+  fabrication: { dot: 'bg-orange-400', text: 'text-orange-700', bg: 'bg-orange-50' },
+  logistics: { dot: 'bg-green-500', text: 'text-green-700', bg: 'bg-green-50' },
+  communication: { dot: 'bg-purple-500', text: 'text-purple-700', bg: 'bg-purple-50' },
+};
+
+function sourceColor(sourceType: string) {
+  return SOURCE_COLORS[sourceType] ?? { dot: 'bg-gray-400', text: 'text-gray-700', bg: 'bg-gray-50' };
 }
 
 export function TabChronologie({ game }: { game: Game }) {
@@ -68,7 +79,7 @@ export function TabChronologie({ game }: { game: Game }) {
 
   // Timeline: all installments with a date, sorted chronologically
   const timelineEntries = milestones
-    .flatMap(m => m.installments.map(inst => ({ milestoneLabel: m.label, ...inst })))
+    .flatMap(m => m.installments.map(inst => ({ milestoneLabel: m.label, sourceType: m.sourceType, ...inst })))
     .filter(i => i.date)
     .sort((a, b) => (a.date! < b.date! ? -1 : 1));
 
@@ -115,6 +126,21 @@ export function TabChronologie({ game }: { game: Game }) {
         </div>
       </div>
 
+      {/* Legend */}
+      <div className="flex items-center gap-4 text-xs text-gray-500">
+        {[
+          { type: 'dev', label: 'Développement' },
+          { type: 'fabrication', label: 'Fabrication' },
+          { type: 'logistics', label: 'Transport' },
+          { type: 'communication', label: 'Communication' },
+        ].map(({ type, label }) => (
+          <span key={type} className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${sourceColor(type).dot}`} />
+            {label}
+          </span>
+        ))}
+      </div>
+
       {/* Milestones / installments editor */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="w-full text-sm border-collapse">
@@ -139,7 +165,10 @@ export function TabChronologie({ game }: { game: Game }) {
                     <tr key={inst.id} className="border-b border-gray-100">
                       {idx === 0 && (
                         <td className="px-3 py-1.5 font-medium text-gray-700 align-top" rowSpan={m.installments.length}>
-                          {m.label}
+                          <span className="flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${sourceColor(m.sourceType).dot}`} />
+                            {m.label}
+                          </span>
                           {mismatch && (
                             <div className="text-xs text-red-500 mt-0.5">
                               Somme des échéances ({fmt(sum)}) ≠ montant ({fmt(m.totalAmount)})
@@ -206,21 +235,19 @@ export function TabChronologie({ game }: { game: Game }) {
                               <Trash2 size={13} />
                             </button>
                           )}
+                          {idx === m.installments.length - 1 && (
+                            <button
+                              title="Ajouter une échéance à cette étape"
+                              className="text-blue-400 hover:text-blue-600"
+                              onClick={() => addInstallment(m)}
+                            >
+                              <Plus size={13} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
                   ))}
-                  <tr className="border-b border-gray-100 bg-gray-50/50">
-                    <td colSpan={6} className="px-3 py-1">
-                      <button
-                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
-                        onClick={() => addInstallment(m)}
-                      >
-                        <Plus size={12} />
-                        Ajouter une échéance à cette étape
-                      </button>
-                    </td>
-                  </tr>
                 </>
               );
             })}
@@ -265,7 +292,10 @@ export function TabChronologie({ game }: { game: Game }) {
                         <div className="bg-white rounded-lg shadow border border-gray-200 p-1.5 mt-1.5 w-full text-[11px] space-y-1 min-w-0">
                           {group.entries.map(e => (
                             <div key={e.id} className={`flex items-center justify-between gap-1 ${e.paid ? 'text-green-600' : 'text-gray-600'}`}>
-                              <span className="truncate" title={`${e.milestoneLabel} — ${e.label}`}>{e.label}</span>
+                              <span className="flex items-center gap-1 min-w-0">
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sourceColor(e.sourceType).dot}`} />
+                                <span className="truncate" title={`${e.milestoneLabel} — ${e.label}`}>{e.label}</span>
+                              </span>
                               <span className="font-medium whitespace-nowrap">{fmt(e.amount)}</span>
                             </div>
                           ))}
