@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Trash2, Scissors } from 'lucide-react';
+import { Trash2, Scissors, Plus } from 'lucide-react';
 import type { Game, PaymentMilestone } from '../../types';
 import { useGameStore } from '../../store';
 import { buildPaymentMilestones, fmt } from '../../utils/calculations';
@@ -41,6 +41,11 @@ export function TabChronologie({ game }: { game: Game }) {
       ];
     });
     updateMilestone(milestone.id, { installments: newInstallments });
+  }
+
+  function addInstallment(milestone: PaymentMilestone) {
+    const newInstallment = { id: uid(), label: 'Nouvelle échéance', amount: 0, date: null, paid: false };
+    updateMilestone(milestone.id, { installments: [...milestone.installments, newInstallment] });
   }
 
   function removeInstallment(milestone: PaymentMilestone, installmentId: string) {
@@ -189,6 +194,17 @@ export function TabChronologie({ game }: { game: Game }) {
                       </td>
                     </tr>
                   ))}
+                  <tr className="border-b border-gray-100 bg-gray-50/50">
+                    <td colSpan={6} className="px-3 py-1">
+                      <button
+                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+                        onClick={() => addInstallment(m)}
+                      >
+                        <Plus size={12} />
+                        Ajouter une échéance à cette étape
+                      </button>
+                    </td>
+                  </tr>
                 </>
               );
             })}
