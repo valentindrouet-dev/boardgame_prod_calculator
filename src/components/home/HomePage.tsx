@@ -1,6 +1,7 @@
 import type { Game } from '../../types';
 import { useGameStore } from '../../store';
-import { calcSales, calcCostPerUnitHT, calcDevTotalHT, calcFabTotalHT, calcLogisticsTotalHT, calcCommTotalHT, fmt } from '../../utils/calculations';
+import { calcSales, calcCostPerUnitHT, calcDevTotalHT, calcFabTotalHT, calcLogisticsTotalHT, calcCommTotalHT, buildPaymentMilestones, fmt } from '../../utils/calculations';
+import { formatMonth, getFiscalYearKey, sourceColor } from '../../utils/timeline';
 
 function getSelectedQuote(game: Game) {
   if (game.factoryQuotes.length === 0) return null;
@@ -139,6 +140,109 @@ function GameCard({ game, onOpen }: { game: Game; onOpen: () => void }) {
   );
 }
 
+function GlobalTimeline({ games }: { games: Game[] }) {
+  const entries = games.flatMap(g => {
+    const milestones = buildPaymentMilestones(g);
+    return milestones.flatMap(m =>
+      m.installments
+        .filter(i => i.date)
+        .map(i => ({ gameName: g.name, sourceType: m.sourceType, label: i.label, amount: i.amount, date: i.date as string, paid: i.paid }))
+    );
+  });
+
+  const events = games.flatMap(g =>
+    (g.projectMilestones ?? []).map(ev => ({ gameName: g.name, label: ev.label, date: ev.date }))
+  );
+
+  const groupsMap = new Map<string, typeof entries>();
+  entries.forEach(e => {
+    if (!groupsMap.has(e.date)) groupsMap.set(e.date, []);
+    groupsMap.get(e.date)!.push(e);
+  });
+  events.forEach(ev => {
+    if (!groupsMap.has(ev.date)) groupsMap.set(ev.date, []);
+  });
+  const eventsByMonth = new Map<string, typeof events>();
+  events.forEach(ev => {
+    if (!eventsByMonth.has(ev.date)) eventsByMonth.set(ev.date, []);
+    eventsByMonth.get(ev.date)!.push(ev);
+  });
+
+  const groups = Array.from(groupsMap.entries())
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([date, dateEntries]) => ({
+      date,
+      entries: dateEntries,
+      events: eventsByMonth.get(date) ?? [],
+      monthTotal: dateEntries.reduce((s, e) => s + e.amount, 0),
+    }));
+
+  const fiscalYearsMap = new Map<string, { label: string; groups: typeof groups }>();
+  groups.forEach(group => {
+    const { key, label } = getFiscalYearKey(group.date);
+    if (!fiscalYearsMap.has(key)) fiscalYearsMap.set(key, { label, groups: [] });
+    fiscalYearsMap.get(key)!.groups.push(group);
+  });
+  const fiscalYears = Array.from(fiscalYearsMap.values());
+
+  if (fiscalYears.length === 0) return null;
+
+  return (
+    <div>
+      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Chronologie globale (tous projets)</h2>
+      <div className="space-y-4">
+        {fiscalYears.map(fy => {
+          const fyTotal = fy.groups.reduce((s, g) => s + g.monthTotal, 0);
+          return (
+            <div key={fy.label} className="bg-gray-50 rounded-lg border border-gray-200 p-3">
+              <div className="flex items-center justify-between mb-3 bg-gray-800 text-white rounded px-3 py-2">
+                <h4 className="text-xs font-bold uppercase tracking-wide">{fy.label}</h4>
+                <span className="text-sm">
+                  Total année : <span className="font-bold text-yellow-400">{fmt(fyTotal)}</span> HT
+                </span>
+              </div>
+              <div className="relative grid gap-2 pt-3 items-stretch" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))' }}>
+                {fy.groups.map(group => {
+                  const allPaid = group.entries.length > 0 && group.entries.every(e => e.paid);
+                  return (
+                    <div key={group.date} className="relative flex flex-col items-center min-w-0 h-full">
+                      <div className={`w-3 h-3 rounded-full border-2 border-white z-10 ${allPaid ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                      <div className="text-[11px] font-bold text-gray-700 mt-1.5 truncate w-full text-center">{formatMonth(group.date)}</div>
+                      <div className="bg-white rounded-lg shadow border border-gray-200 p-1.5 mt-1.5 w-full text-[11px] space-y-1 min-w-0 flex-1 flex flex-col">
+                        <div className="space-y-1 flex-1">
+                          {group.events.map((ev, i) => (
+                            <div key={i} className="flex items-center gap-1 text-blue-600 font-medium">
+                              <span className="truncate" title={`${ev.gameName} — ${ev.label}`}>{ev.label}</span>
+                            </div>
+                          ))}
+                          {group.entries.map((e, i) => (
+                            <div key={i} className={`flex items-center justify-between gap-1 ${e.paid ? 'text-green-600' : 'text-gray-600'}`}>
+                              <span className="flex items-center gap-1 min-w-0">
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sourceColor(e.sourceType).dot}`} />
+                                <span className="truncate" title={`${e.gameName} — ${e.label}`}>{e.gameName}</span>
+                              </span>
+                              <span className="font-medium whitespace-nowrap">{fmt(e.amount)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {group.entries.length > 0 && (
+                          <div className="border-t border-gray-100 pt-1 mt-1 text-center">
+                            <div className="font-bold text-gray-800 text-sm whitespace-nowrap">{fmt(group.monthTotal)}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function HomePage({ onOpenGame }: { onOpenGame: (id: string) => void }) {
   const { games } = useGameStore();
 
@@ -227,6 +331,9 @@ export function HomePage({ onOpenGame }: { onOpenGame: (id: string) => void }) {
                 ))}
               </div>
             </div>
+
+            {/* Global timeline across all projects */}
+            <GlobalTimeline games={games} />
 
             {/* Cross-project cost/unit comparison */}
             {allQuoteRows.length > 0 && (

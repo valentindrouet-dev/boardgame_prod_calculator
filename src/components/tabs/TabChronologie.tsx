@@ -3,35 +3,10 @@ import { Trash2, Scissors, Plus, Flag } from 'lucide-react';
 import type { Game, PaymentMilestone } from '../../types';
 import { useGameStore } from '../../store';
 import { buildPaymentMilestones, fmt } from '../../utils/calculations';
+import { formatMonth, getFiscalYearKey, sourceColor } from '../../utils/timeline';
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
-}
-
-function formatMonth(value: string): string {
-  const [year, month] = value.split('-');
-  if (!year || !month) return value;
-  const date = new Date(parseInt(year), parseInt(month) - 1, 1);
-  const label = date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
-  return label.charAt(0).toUpperCase() + label.slice(1);
-}
-
-// Fiscal year: September of year N to August of year N+1
-function getFiscalYearKey(value: string): { key: string; label: string } {
-  const [year, month] = value.split('-').map(Number);
-  const startYear = month >= 9 ? year : year - 1;
-  return { key: String(startYear), label: `Année ${startYear}-${startYear + 1} (sept. à août)` };
-}
-
-const SOURCE_COLORS: Record<string, { dot: string; text: string; bg: string }> = {
-  dev: { dot: 'bg-yellow-400', text: 'text-yellow-700', bg: 'bg-yellow-50' },
-  fabrication: { dot: 'bg-orange-400', text: 'text-orange-700', bg: 'bg-orange-50' },
-  logistics: { dot: 'bg-green-500', text: 'text-green-700', bg: 'bg-green-50' },
-  communication: { dot: 'bg-purple-500', text: 'text-purple-700', bg: 'bg-purple-50' },
-};
-
-function sourceColor(sourceType: string) {
-  return SOURCE_COLORS[sourceType] ?? { dot: 'bg-gray-400', text: 'text-gray-700', bg: 'bg-gray-50' };
 }
 
 export function TabChronologie({ game }: { game: Game }) {
@@ -118,22 +93,16 @@ export function TabChronologie({ game }: { game: Game }) {
     eventsByMonth.get(ev.date)!.push(ev);
   });
 
-  let cumulative = 0;
-  let cumulativeTTC = 0;
   const timelineGroups = Array.from(groupsMap.entries())
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([date, entries]) => {
       const monthTotal = entries.reduce((s, e) => s + e.amount, 0);
-      cumulative += monthTotal;
-      cumulativeTTC += monthTotal * vatMult;
       return {
         date,
         entries,
         events: eventsByMonth.get(date) ?? [],
         monthTotal,
         monthTotalTTC: monthTotal * vatMult,
-        cumulative,
-        cumulativeTTC,
       };
     });
 
@@ -354,53 +323,47 @@ export function TabChronologie({ game }: { game: Game }) {
             const fyTotal = fy.groups.reduce((s, g) => s + g.monthTotal, 0);
             return (
               <div key={fy.label} className="bg-gray-50 rounded-lg border border-gray-200 p-3">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wide">{fy.label}</h4>
-                  <span className="text-xs text-gray-500">
-                    Total : <span className="font-semibold text-gray-700">{fmt(fyTotal)}</span> HT
+                <div className="flex items-center justify-between mb-3 bg-gray-800 text-white rounded px-3 py-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wide">{fy.label}</h4>
+                  <span className="text-sm">
+                    Total année : <span className="font-bold text-yellow-400">{fmt(fyTotal)}</span> HT
+                    <span className="text-gray-400 ml-1.5">· {fmt(fyTotal * vatMult)} TTC</span>
                   </span>
                 </div>
                 <div
-                  className="relative grid gap-2 pt-3"
+                  className="relative grid gap-2 pt-3 items-stretch"
                   style={{ gridTemplateColumns: `repeat(auto-fit, minmax(90px, 1fr))` }}
                 >
                   {fy.groups.map(group => {
                     const allPaid = group.entries.every(e => e.paid);
                     return (
-                      <div key={group.date} className="relative flex flex-col items-center min-w-0">
+                      <div key={group.date} className="relative flex flex-col items-center min-w-0 h-full">
                         <div className={`w-3 h-3 rounded-full border-2 border-white z-10 ${allPaid ? 'bg-green-500' : 'bg-yellow-500'}`} />
                         <div className="text-[11px] font-bold text-gray-700 mt-1.5 truncate w-full text-center">{formatMonth(group.date)}</div>
-                        <div className="bg-white rounded-lg shadow border border-gray-200 p-1.5 mt-1.5 w-full text-[11px] space-y-1 min-w-0">
-                          {group.events.map(ev => (
-                            <div key={ev.id} className="flex items-center gap-1 text-blue-600 font-medium">
-                              <Flag size={10} className="shrink-0" />
-                              <span className="truncate" title={ev.label}>{ev.label}</span>
-                            </div>
-                          ))}
-                          {group.entries.map(e => (
-                            <div key={e.id} className={`flex items-center justify-between gap-1 ${e.paid ? 'text-green-600' : 'text-gray-600'}`}>
-                              <span className="flex items-center gap-1 min-w-0">
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sourceColor(e.sourceType).dot}`} />
-                                <span className="truncate" title={`${e.milestoneLabel} — ${e.label}`}>{e.label}</span>
-                              </span>
-                              <span className="font-medium whitespace-nowrap">{fmt(e.amount)}</span>
-                            </div>
-                          ))}
-                          <div className="border-t border-gray-100 pt-1 mt-1">
-                            <div className="flex items-center justify-between font-bold text-gray-800">
-                              <span className="truncate">Mois</span>
-                              <span className="whitespace-nowrap">{fmt(group.monthTotal)}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-gray-400">
-                              <span>TTC</span>
-                              <span className="whitespace-nowrap">{fmt(group.monthTotalTTC)}</span>
-                            </div>
+                        <div className="bg-white rounded-lg shadow border border-gray-200 p-1.5 mt-1.5 w-full text-[11px] space-y-1 min-w-0 flex-1 flex flex-col">
+                          <div className="space-y-1 flex-1">
+                            {group.events.map(ev => (
+                              <div key={ev.id} className="flex items-center gap-1 text-blue-600 font-medium">
+                                <Flag size={10} className="shrink-0" />
+                                <span className="truncate" title={ev.label}>{ev.label}</span>
+                              </div>
+                            ))}
+                            {group.entries.map(e => (
+                              <div key={e.id} className={`flex items-center justify-between gap-1 ${e.paid ? 'text-green-600' : 'text-gray-600'}`}>
+                                <span className="flex items-center gap-1 min-w-0">
+                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sourceColor(e.sourceType).dot}`} />
+                                  <span className="truncate" title={`${e.milestoneLabel} — ${e.label}`}>{e.label}</span>
+                                </span>
+                                <span className="font-medium whitespace-nowrap">{fmt(e.amount)}</span>
+                              </div>
+                            ))}
                           </div>
-                        </div>
-                        <div className="bg-gray-800 text-white rounded p-1 mt-1 w-full text-[10px] text-center">
-                          <div className="text-gray-300">Cumul</div>
-                          <div className="font-bold text-yellow-400 whitespace-nowrap">{fmt(group.cumulative)}</div>
-                          <div className="text-gray-400 whitespace-nowrap">{fmt(group.cumulativeTTC)} TTC</div>
+                          {(group.entries.length > 0) && (
+                            <div className="border-t border-gray-100 pt-1 mt-1 text-center">
+                              <div className="font-bold text-gray-800 text-sm whitespace-nowrap">{fmt(group.monthTotal)}</div>
+                              <div className="text-gray-400 whitespace-nowrap">{fmt(group.monthTotalTTC)} TTC</div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
