@@ -85,6 +85,12 @@ export interface PaymentMilestone {
   installments: PaymentInstallment[];
 }
 
+export interface ProjectMilestone {
+  id: string;
+  label: string;
+  date: string;
+}
+
 export interface GameComponent {
   id: string;
   name: string;
@@ -107,6 +113,7 @@ export interface Game {
   gameComponents: GameComponent[];
   selectedFactoryQuoteId?: string;
   paymentSchedule?: PaymentMilestone[];
+  projectMilestones?: ProjectMilestone[];
   createdAt: string;
   updatedAt: string;
 }

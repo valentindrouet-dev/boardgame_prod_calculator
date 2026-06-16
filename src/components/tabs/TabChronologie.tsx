@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Trash2, Scissors, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Trash2, Scissors, Plus, Flag } from 'lucide-react';
 import type { Game, PaymentMilestone } from '../../types';
 import { useGameStore } from '../../store';
 import { buildPaymentMilestones, fmt } from '../../utils/calculations';
@@ -38,6 +38,22 @@ export function TabChronologie({ game }: { game: Game }) {
   const { updateGame } = useGameStore();
   const milestones = useMemo(() => buildPaymentMilestones(game), [game]);
   const vatMult = 1 + game.vatRate / 100;
+  const projectMilestones = game.projectMilestones ?? [];
+  const [newEventLabel, setNewEventLabel] = useState('');
+  const [newEventDate, setNewEventDate] = useState('');
+
+  function addProjectMilestone() {
+    if (!newEventLabel.trim() || !newEventDate) return;
+    updateGame(game.id, {
+      projectMilestones: [...projectMilestones, { id: uid(), label: newEventLabel.trim(), date: newEventDate }],
+    });
+    setNewEventLabel('');
+    setNewEventDate('');
+  }
+
+  function removeProjectMilestone(id: string) {
+    updateGame(game.id, { projectMilestones: projectMilestones.filter(e => e.id !== id) });
+  }
 
   function saveMilestones(updated: PaymentMilestone[]) {
     updateGame(game.id, { paymentSchedule: updated });
@@ -91,14 +107,35 @@ export function TabChronologie({ game }: { game: Game }) {
     groupsMap.get(key)!.push(entry);
   });
 
+  // Ensure months that only have a project milestone (no payment) still appear
+  projectMilestones.forEach(ev => {
+    if (!groupsMap.has(ev.date)) groupsMap.set(ev.date, []);
+  });
+
+  const eventsByMonth = new Map<string, typeof projectMilestones>();
+  projectMilestones.forEach(ev => {
+    if (!eventsByMonth.has(ev.date)) eventsByMonth.set(ev.date, []);
+    eventsByMonth.get(ev.date)!.push(ev);
+  });
+
   let cumulative = 0;
   let cumulativeTTC = 0;
-  const timelineGroups = Array.from(groupsMap.entries()).map(([date, entries]) => {
-    const monthTotal = entries.reduce((s, e) => s + e.amount, 0);
-    cumulative += monthTotal;
-    cumulativeTTC += monthTotal * vatMult;
-    return { date, entries, monthTotal, monthTotalTTC: monthTotal * vatMult, cumulative, cumulativeTTC };
-  });
+  const timelineGroups = Array.from(groupsMap.entries())
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([date, entries]) => {
+      const monthTotal = entries.reduce((s, e) => s + e.amount, 0);
+      cumulative += monthTotal;
+      cumulativeTTC += monthTotal * vatMult;
+      return {
+        date,
+        entries,
+        events: eventsByMonth.get(date) ?? [],
+        monthTotal,
+        monthTotalTTC: monthTotal * vatMult,
+        cumulative,
+        cumulativeTTC,
+      };
+    });
 
   // Group month-groups into fiscal years (Sept -> Aug)
   const fiscalYearsMap = new Map<string, { label: string; groups: typeof timelineGroups }>();
@@ -263,11 +300,55 @@ export function TabChronologie({ game }: { game: Game }) {
         </table>
       </div>
 
+      {/* Project milestones / events editor */}
+      <div className="bg-white rounded-lg shadow p-3">
+        <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+          <Flag size={14} className="text-blue-500" />
+          Étapes du projet (fabrication, présentation, sortie...)
+        </h3>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {projectMilestones.map(ev => (
+            <span key={ev.id} className="flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full">
+              <Flag size={11} />
+              {ev.label} — {formatMonth(ev.date)}
+              <button onClick={() => removeProjectMilestone(ev.id)} className="text-blue-400 hover:text-red-500">
+                <Trash2 size={11} />
+              </button>
+            </span>
+          ))}
+          {projectMilestones.length === 0 && (
+            <span className="text-xs text-gray-400">Aucune étape ajoutée.</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Ex: Sortie du jeu"
+            value={newEventLabel}
+            onChange={e => setNewEventLabel(e.target.value)}
+            className="px-2 py-1 border border-gray-200 rounded text-sm flex-1 focus:outline-none focus:border-yellow-400"
+          />
+          <input
+            type="month"
+            value={newEventDate}
+            onChange={e => setNewEventDate(e.target.value)}
+            className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-yellow-400"
+          />
+          <button
+            onClick={addProjectMilestone}
+            className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white text-sm px-2.5 py-1 rounded transition-colors"
+          >
+            <Plus size={13} />
+            Ajouter
+          </button>
+        </div>
+      </div>
+
       {/* Timeline */}
       <div className="space-y-6">
         <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Frise chronologique</h3>
         {fiscalYears.length === 0 ? (
-          <p className="text-gray-400 text-sm">Aucune échéance datée. Renseignez un mois de paiement ci-dessus pour la voir apparaître ici.</p>
+          <p className="text-gray-400 text-sm">Aucune échéance datée ni étape de projet. Renseignez un mois de paiement ou une étape ci-dessus pour la voir apparaître ici.</p>
         ) : (
           fiscalYears.map(fy => {
             const fyTotal = fy.groups.reduce((s, g) => s + g.monthTotal, 0);
@@ -290,6 +371,12 @@ export function TabChronologie({ game }: { game: Game }) {
                         <div className={`w-3 h-3 rounded-full border-2 border-white z-10 ${allPaid ? 'bg-green-500' : 'bg-yellow-500'}`} />
                         <div className="text-[11px] font-bold text-gray-700 mt-1.5 truncate w-full text-center">{formatMonth(group.date)}</div>
                         <div className="bg-white rounded-lg shadow border border-gray-200 p-1.5 mt-1.5 w-full text-[11px] space-y-1 min-w-0">
+                          {group.events.map(ev => (
+                            <div key={ev.id} className="flex items-center gap-1 text-blue-600 font-medium">
+                              <Flag size={10} className="shrink-0" />
+                              <span className="truncate" title={ev.label}>{ev.label}</span>
+                            </div>
+                          ))}
                           {group.entries.map(e => (
                             <div key={e.id} className={`flex items-center justify-between gap-1 ${e.paid ? 'text-green-600' : 'text-gray-600'}`}>
                               <span className="flex items-center gap-1 min-w-0">
