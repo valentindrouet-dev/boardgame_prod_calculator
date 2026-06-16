@@ -143,7 +143,15 @@ export function TabChronologie({ game }: { game: Game }) {
                           className="w-full px-1 py-0.5 border border-gray-200 rounded text-right text-sm focus:outline-none focus:border-yellow-400"
                         />
                       </td>
-                      <td className="px-3 py-1.5 text-right text-gray-500">{fmt(inst.amount * vatMult)}</td>
+                      <td className="px-3 py-1.5">
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={(inst.amount * vatMult) || ''}
+                          onChange={e => updateInstallment(m, inst.id, { amount: (parseFloat(e.target.value) || 0) / vatMult })}
+                          className="w-full px-1 py-0.5 border border-gray-200 rounded text-right text-sm text-gray-500 focus:outline-none focus:border-yellow-400"
+                        />
+                      </td>
                       <td className="px-3 py-1.5">
                         <input
                           type="month"
