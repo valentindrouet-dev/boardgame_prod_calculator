@@ -11,6 +11,7 @@ function uid() {
 export function TabChronologie({ game }: { game: Game }) {
   const { updateGame } = useGameStore();
   const milestones = useMemo(() => buildPaymentMilestones(game), [game]);
+  const vatMult = 1 + game.vatRate / 100;
 
   function saveMilestones(updated: PaymentMilestone[]) {
     updateGame(game.id, { paymentSchedule: updated });
@@ -52,9 +53,11 @@ export function TabChronologie({ game }: { game: Game }) {
     .sort((a, b) => (a.date! < b.date! ? -1 : 1));
 
   let cumulative = 0;
+  let cumulativeTTC = 0;
   const timelineWithCumulative = timelineEntries.map(entry => {
     cumulative += entry.amount;
-    return { ...entry, cumulative };
+    cumulativeTTC += entry.amount * vatMult;
+    return { ...entry, cumulative, cumulativeTTC };
   });
 
   const undatedTotal = milestones
@@ -69,7 +72,8 @@ export function TabChronologie({ game }: { game: Game }) {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-800">Chronologie des paiements</h2>
         <div className="text-sm text-gray-500">
-          Total prévisionnel : <span className="font-bold text-gray-800">{fmt(grandTotal)}</span>
+          Total prévisionnel : <span className="font-bold text-gray-800">{fmt(grandTotal)} HT</span>
+          <span className="text-gray-400"> · {fmt(grandTotal * vatMult)} TTC</span>
         </div>
       </div>
 
@@ -80,7 +84,8 @@ export function TabChronologie({ game }: { game: Game }) {
             <tr className="bg-gray-700 text-white text-xs">
               <th className="px-3 py-2 text-left">Étape</th>
               <th className="px-3 py-2 text-left">Échéance</th>
-              <th className="px-3 py-2 text-right w-32">Montant HT</th>
+              <th className="px-3 py-2 text-right w-28">Montant HT</th>
+              <th className="px-3 py-2 text-right w-28">Montant TTC</th>
               <th className="px-3 py-2 text-center w-36">Date de paiement</th>
               <th className="px-3 py-2 text-center w-16">Payé</th>
               <th className="px-3 py-2 w-20"></th>
@@ -121,6 +126,7 @@ export function TabChronologie({ game }: { game: Game }) {
                           className="w-full px-1 py-0.5 border border-gray-200 rounded text-right text-sm focus:outline-none focus:border-yellow-400"
                         />
                       </td>
+                      <td className="px-3 py-1.5 text-right text-gray-500">{fmt(inst.amount * vatMult)}</td>
                       <td className="px-3 py-1.5">
                         <input
                           type="date"
@@ -164,7 +170,7 @@ export function TabChronologie({ game }: { game: Game }) {
 
             {milestones.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-gray-400 text-center py-8 text-sm">
+                <td colSpan={7} className="text-gray-400 text-center py-8 text-sm">
                   Aucune dépense enregistrée pour l'instant. Ajoutez des postes dans Développement, Fabrication, Communication ou les frais de transport.
                 </td>
               </tr>
@@ -185,8 +191,10 @@ export function TabChronologie({ game }: { game: Game }) {
                 <tr className="bg-gray-700 text-white text-xs">
                   <th className="px-3 py-2 text-left">Date</th>
                   <th className="px-3 py-2 text-left">Étape</th>
-                  <th className="px-3 py-2 text-right">Montant</th>
-                  <th className="px-3 py-2 text-right">Trésorerie cumulée nécessaire</th>
+                  <th className="px-3 py-2 text-right">Montant HT</th>
+                  <th className="px-3 py-2 text-right">Montant TTC</th>
+                  <th className="px-3 py-2 text-right">Trésorerie cumulée HT</th>
+                  <th className="px-3 py-2 text-right">Trésorerie cumulée TTC</th>
                 </tr>
               </thead>
               <tbody>
@@ -195,7 +203,9 @@ export function TabChronologie({ game }: { game: Game }) {
                     <td className="px-3 py-1.5 font-medium text-gray-700">{entry.date}</td>
                     <td className="px-3 py-1.5 text-gray-600">{entry.milestoneLabel} — {entry.label}</td>
                     <td className="px-3 py-1.5 text-right font-semibold">{fmt(entry.amount)}</td>
+                    <td className="px-3 py-1.5 text-right text-gray-500">{fmt(entry.amount * vatMult)}</td>
                     <td className="px-3 py-1.5 text-right text-yellow-700 font-bold">{fmt(entry.cumulative)}</td>
+                    <td className="px-3 py-1.5 text-right text-yellow-600">{fmt(entry.cumulativeTTC)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -176,12 +176,18 @@ export interface PaymentSource {
 export function getPaymentSources(game: Game): PaymentSource[] {
   const sources: PaymentSource[] = [];
 
+  let devSubtotal = 0;
   game.developmentItems.forEach(item => {
-    const amount = item.htPerUnit * item.quantity * (1 + game.developmentSafetyMarginPercent / 100);
+    const amount = item.htPerUnit * item.quantity;
+    devSubtotal += amount;
     if (amount !== 0) {
       sources.push({ sourceType: 'dev', sourceId: item.id, label: `Développement - ${item.name}`, amount });
     }
   });
+  const devMargin = calcDevTotalHT(game) - devSubtotal;
+  if (Math.abs(devMargin) > 0.01) {
+    sources.push({ sourceType: 'dev', sourceId: 'dev-margin', label: `Développement - Marge de sécurité (${game.developmentSafetyMarginPercent}%)`, amount: devMargin });
+  }
 
   const selectedQuote = game.factoryQuotes.find(q => q.id === game.selectedFactoryQuoteId) ?? game.factoryQuotes[0];
   if (selectedQuote) {
@@ -193,17 +199,27 @@ export function getPaymentSources(game: Game): PaymentSource[] {
     });
   }
 
+  let logSubtotal = 0;
   (game.logistics ?? []).forEach(item => {
-    const amount = item.priceHT * (1 + (game.logisticsSafetyMarginPercent ?? 20) / 100);
-    if (amount !== 0) {
-      sources.push({ sourceType: 'logistics', sourceId: item.id, label: `Transport - ${item.name}`, amount });
+    logSubtotal += item.priceHT;
+    if (item.priceHT !== 0) {
+      sources.push({ sourceType: 'logistics', sourceId: item.id, label: `Transport - ${item.name}`, amount: item.priceHT });
     }
   });
+  const logMargin = calcLogisticsTotalHT(game) - logSubtotal;
+  if (Math.abs(logMargin) > 0.01) {
+    sources.push({ sourceType: 'logistics', sourceId: 'logistics-margin', label: `Transport - Marge de sécurité (${game.logisticsSafetyMarginPercent ?? 20}%)`, amount: logMargin });
+  }
 
   game.communicationItems.forEach(item => {
-    const amount = item.monthlyPriceHT * item.months * (1 + item.safetyMarginPercent / 100);
-    if (amount !== 0) {
-      sources.push({ sourceType: 'communication', sourceId: item.id, label: `Communication - ${item.name}`, amount });
+    const raw = item.monthlyPriceHT * item.months;
+    const amount = raw * (1 + item.safetyMarginPercent / 100);
+    if (raw !== 0) {
+      sources.push({ sourceType: 'communication', sourceId: item.id, label: `Communication - ${item.name}`, amount: raw });
+    }
+    const margin = amount - raw;
+    if (Math.abs(margin) > 0.01) {
+      sources.push({ sourceType: 'communication', sourceId: `${item.id}-margin`, label: `Communication - ${item.name} (marge ${item.safetyMarginPercent}%)`, amount: margin });
     }
   });
 
