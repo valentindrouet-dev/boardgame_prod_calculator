@@ -2,6 +2,12 @@ import type { Game } from '../../types';
 import { useGameStore } from '../../store';
 import { calcSales, calcCostPerUnitHT, calcDevTotalHT, calcFabTotalHT, calcLogisticsTotalHT, calcCommTotalHT, fmt } from '../../utils/calculations';
 
+function getSelectedQuote(game: Game) {
+  if (game.factoryQuotes.length === 0) return null;
+  const selected = game.factoryQuotes.find(q => q.id === game.selectedFactoryQuoteId);
+  return selected ?? game.factoryQuotes[0];
+}
+
 function StatCard({ label, value, sub, color = 'yellow' }: { label: string; value: string; sub?: string; color?: string }) {
   const border = color === 'green' ? 'border-green-400' : color === 'red' ? 'border-red-400' : color === 'purple' ? 'border-purple-400' : 'border-yellow-400';
   const text = color === 'green' ? 'text-green-700' : color === 'red' ? 'text-red-700' : color === 'purple' ? 'text-purple-700' : 'text-yellow-700';
@@ -15,8 +21,12 @@ function StatCard({ label, value, sub, color = 'yellow' }: { label: string; valu
 }
 
 function GameCard({ game, onOpen }: { game: Game; onOpen: () => void }) {
+  const { updateGame } = useGameStore();
   const scenarios = game.salesScenarios;
   const hasScenarios = scenarios.length > 0;
+  const selectedQuote = getSelectedQuote(game);
+  const fixedCosts = calcDevTotalHT(game) + calcLogisticsTotalHT(game) + calcCommTotalHT(game);
+  const totalCost = fixedCosts + (selectedQuote ? calcFabTotalHT(selectedQuote) : 0);
 
   const bestScenario = hasScenarios
     ? scenarios.reduce((best, s, idx) => {
@@ -55,13 +65,38 @@ function GameCard({ game, onOpen }: { game: Game; onOpen: () => void }) {
             <div className="text-gray-500">Communication</div>
             <div className="font-semibold">{fmt(calcCommTotalHT(game))}</div>
           </div>
-          {game.factoryQuotes.length > 0 && (
-            <div className="bg-gray-50 rounded p-2">
-              <div className="text-gray-500">Fabrication (1er devis)</div>
-              <div className="font-semibold">{fmt(calcFabTotalHT(game.factoryQuotes[0]))}</div>
-            </div>
-          )}
         </div>
+
+        {/* Factory quote selection */}
+        {game.factoryQuotes.length > 0 && (
+          <div onClick={e => e.stopPropagation()}>
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Devis retenu pour l'investissement</div>
+            <div className="space-y-1">
+              {game.factoryQuotes.map(q => (
+                <label
+                  key={q.id}
+                  className="flex items-center justify-between text-xs border border-gray-100 rounded px-2 py-1 cursor-pointer hover:bg-gray-50"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <input
+                      type="radio"
+                      name={`quote-${game.id}`}
+                      checked={selectedQuote?.id === q.id}
+                      onChange={() => updateGame(game.id, { selectedFactoryQuoteId: q.id })}
+                    />
+                    <span className="text-gray-700 font-medium">{q.factoryName}</span>
+                    <span className="text-gray-400">({q.quantity.toLocaleString('fr-FR')} u.)</span>
+                  </span>
+                  <span className="font-semibold">{fmt(calcFabTotalHT(q))}</span>
+                </label>
+              ))}
+            </div>
+            <div className="bg-gray-800 text-white rounded p-2 text-xs flex items-center justify-between mt-1.5">
+              <span className="uppercase tracking-wide text-gray-300">Coût total projet</span>
+              <span className="font-bold text-yellow-400">{fmt(totalCost)}</span>
+            </div>
+          </div>
+        )}
 
         {/* Scenarios */}
         {hasScenarios && (
@@ -113,13 +148,12 @@ export function HomePage({ onOpenGame }: { onOpenGame: (id: string) => void }) {
     g.salesScenarios.map((_, si) => ({ game: g, calc: calcSales(g, si) }))
   ).filter(x => x.calc !== null) as { game: Game; calc: NonNullable<ReturnType<typeof calcSales>> }[];
 
-  // Investment = fixed costs + cheapest factory quote per game (devis are alternatives, not cumulative)
+  // Investment = fixed costs + selected factory quote per game (devis are alternatives, not cumulative)
   const totalInvestment = games.reduce((sum, g) => {
     const fixed = calcDevTotalHT(g) + calcLogisticsTotalHT(g) + calcCommTotalHT(g);
-    const cheapestFab = g.factoryQuotes.length > 0
-      ? Math.min(...g.factoryQuotes.map(q => calcFabTotalHT(q)))
-      : 0;
-    return sum + fixed + cheapestFab;
+    const quote = getSelectedQuote(g);
+    const fab = quote ? calcFabTotalHT(quote) : 0;
+    return sum + fixed + fab;
   }, 0);
 
   const totalRevenue = allScenarios.reduce((sum, { calc }) => sum + calc.totalVentesHT, 0);
@@ -158,7 +192,7 @@ export function HomePage({ onOpenGame }: { onOpenGame: (id: string) => void }) {
                 <StatCard
                   label="Investissement total"
                   value={fmt(totalInvestment)}
-                  sub="dév + transport + comm + devis le moins cher"
+                  sub="dév + transport + comm + devis sélectionné"
                   color="red"
                 />
                 {allScenarios.length > 0 && (

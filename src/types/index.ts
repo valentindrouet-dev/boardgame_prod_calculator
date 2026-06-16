@@ -88,6 +88,7 @@ export interface Game {
   communicationItems: CommunicationItem[];
   salesScenarios: SalesScenario[];
   gameComponents: GameComponent[];
+  selectedFactoryQuoteId?: string;
   createdAt: string;
   updatedAt: string;
 }
