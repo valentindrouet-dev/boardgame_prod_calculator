@@ -190,15 +190,18 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
                 const compSubtotal = quote.components.reduce((s, c) => s + c.priceUSD * c.quantity * quote.dollarToEuroRate, 0);
                 const compPerUnit = calcFabComponentsPerUnitEUR(quote);
                 const toolingEUR = calcFabToolingEUR(quote);
+                const rate = quote.dollarToEuroRate;
+                const fabPerUnitUSD = rate > 0 ? fabPerUnit / rate : 0;
+                const fabTotalUSD = rate > 0 ? fabTotal / rate : 0;
                 return (
                   <>
                     <tr className="bg-amber-50 text-xs italic text-gray-600 border-t border-amber-200">
                       <td className="px-2 py-1" colSpan={4}>
                         Marge d'Incertitude {quote.uncertaintyMarginPercent}%
                       </td>
+                      <td></td>
                       <td className="px-2 py-1 text-right">{fmt(compPerUnit - compSubtotal)}</td>
                       <td className="px-2 py-1 text-right">{fmt((compPerUnit - compSubtotal) * (1 + game.vatRate / 100))}</td>
-                      <td></td>
                       <td></td>
                     </tr>
 
@@ -227,16 +230,16 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
 
                     <tr className="bg-amber-100 font-bold text-sm border-t border-amber-300">
                       <td className="px-2 py-1.5" colSpan={4}>TOTAL Fabrication / unité (amorti)</td>
+                      <td className="px-2 py-1.5 text-right text-amber-800">{fmtUSD(fabPerUnitUSD)}</td>
                       <td className="px-2 py-1.5 text-right text-amber-800">{fmt(fabPerUnit)}</td>
                       <td className="px-2 py-1.5 text-right text-amber-700">{fmt(fabPerUnitTTC)}</td>
-                      <td></td>
                       <td></td>
                     </tr>
                     <tr className="bg-amber-200 font-bold text-sm">
                       <td className="px-2 py-1.5" colSpan={4}>TOTAL Fabrication ({quote.quantity.toLocaleString('fr-FR')} unités)</td>
+                      <td className="px-2 py-1.5 text-right text-amber-900">{fmtUSD(fabTotalUSD)}</td>
                       <td className="px-2 py-1.5 text-right text-amber-900">{fmt(fabTotal)}</td>
                       <td className="px-2 py-1.5 text-right text-amber-800">{fmt(fabTotalTTC)}</td>
-                      <td></td>
                       <td></td>
                     </tr>
                     {/* USD subtotal info */}
