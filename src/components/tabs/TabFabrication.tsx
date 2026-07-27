@@ -22,9 +22,8 @@ function NumInput({ value, onChange, step = '0.01', className = '' }: {
   );
 }
 
-function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
+function QuoteCard({ game, quote, expanded, onToggle }: { game: Game; quote: FactoryQuote; expanded: boolean; onToggle: () => void }) {
   const { updateFactoryQuote, removeFactoryQuote, duplicateFactoryQuote, addComponent, updateComponent, removeComponent, moveComponent } = useGameStore();
-  const [expanded, setExpanded] = useState(true);
 
   const update = (patch: Partial<FactoryQuote>) => updateFactoryQuote(game.id, quote.id, patch);
 
@@ -54,10 +53,16 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <div className="text-right mr-2">
+            <div className="text-xs text-gray-300 uppercase tracking-wide">Total fabrication</div>
+            <div className="text-sm font-bold text-yellow-400 whitespace-nowrap">
+              {fmt(fabTotal)} HT <span className="text-gray-400 font-normal">· {fmt(fabTotalTTC)} TTC</span>
+            </div>
+          </div>
           <button className="text-gray-300 hover:text-white" title="Dupliquer cette usine" onClick={() => duplicateFactoryQuote(game.id, quote.id)}>
             <Copy size={16} />
           </button>
-          <button className="text-gray-300 hover:text-white" onClick={() => setExpanded(!expanded)}>
+          <button className="text-gray-300 hover:text-white" title={expanded ? 'Replier' : 'Déplier'} onClick={onToggle}>
             {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
           </button>
           <button className="text-red-400 hover:text-red-300" onClick={() => removeFactoryQuote(game.id, quote.id)}>
@@ -396,18 +401,41 @@ function LogisticsSection({ game }: { game: Game }) {
 
 export function TabFabrication({ game }: { game: Game }) {
   const { addFactoryQuote } = useGameStore();
+  // Collapsed quote ids; absent = expanded (default)
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const allCollapsed = game.factoryQuotes.length > 0 && game.factoryQuotes.every(q => collapsed[q.id]);
+
+  const toggleAll = () => {
+    if (allCollapsed) {
+      setCollapsed({});
+    } else {
+      setCollapsed(Object.fromEntries(game.factoryQuotes.map(q => [q.id, true])));
+    }
+  };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-gray-800">Fabrication</h2>
-        <button
-          className="flex items-center gap-1.5 bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold text-sm px-3 py-1.5 rounded transition-colors"
-          onClick={() => addFactoryQuote(game.id)}
-        >
-          <Plus size={14} />
-          Ajouter Usine
-        </button>
+        <div className="flex items-center gap-2">
+          {game.factoryQuotes.length > 1 && (
+            <button
+              className="flex items-center gap-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold text-sm px-3 py-1.5 rounded transition-colors"
+              onClick={toggleAll}
+            >
+              {allCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+              {allCollapsed ? 'Tout déplier' : 'Tout replier'}
+            </button>
+          )}
+          <button
+            className="flex items-center gap-1.5 bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold text-sm px-3 py-1.5 rounded transition-colors"
+            onClick={() => addFactoryQuote(game.id)}
+          >
+            <Plus size={14} />
+            Ajouter Usine
+          </button>
+        </div>
       </div>
 
       {game.factoryQuotes.length === 0 && (
@@ -417,7 +445,13 @@ export function TabFabrication({ game }: { game: Game }) {
       )}
 
       {game.factoryQuotes.map(quote => (
-        <QuoteCard key={quote.id} game={game} quote={quote} />
+        <QuoteCard
+          key={quote.id}
+          game={game}
+          quote={quote}
+          expanded={!collapsed[quote.id]}
+          onToggle={() => setCollapsed(c => ({ ...c, [quote.id]: !c[quote.id] }))}
+        />
       ))}
 
       <div className="mt-2">
