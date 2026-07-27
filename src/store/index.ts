@@ -35,6 +35,7 @@ interface GameStore {
   addFactoryQuote: (gameId: string) => void;
   updateFactoryQuote: (gameId: string, quoteId: string, patch: Partial<FactoryQuote>) => void;
   removeFactoryQuote: (gameId: string, quoteId: string) => void;
+  duplicateFactoryQuote: (gameId: string, quoteId: string) => void;
 
   // Manufacturing Components
   addComponent: (gameId: string, quoteId: string) => void;
@@ -193,6 +194,25 @@ export const useGameStore = create<GameStore>()(
               factoryQuotes: g.factoryQuotes.filter((q) => q.id !== quoteId)
             }
           ),
+        })),
+
+      duplicateFactoryQuote: (gameId, quoteId) =>
+        set((s) => ({
+          games: s.games.map((g) => {
+            if (g.id !== gameId) return g;
+            const idx = g.factoryQuotes.findIndex((q) => q.id === quoteId);
+            if (idx === -1) return g;
+            const original = g.factoryQuotes[idx];
+            const copy: FactoryQuote = {
+              ...original,
+              id: uid(),
+              factoryName: `${original.factoryName} (copie)`,
+              components: original.components.map((c) => ({ ...c, id: uid() })),
+            };
+            const factoryQuotes = [...g.factoryQuotes];
+            factoryQuotes.splice(idx + 1, 0, copy);
+            return { ...g, factoryQuotes };
+          }),
         })),
 
       addComponent: (gameId, quoteId) =>

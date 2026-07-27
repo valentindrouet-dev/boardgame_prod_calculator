@@ -1,4 +1,4 @@
-import { Plus, Trash2, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Eye, EyeOff, Copy } from 'lucide-react';
 import { useState } from 'react';
 import type { Game, FactoryQuote } from '../../types';
 import { useGameStore } from '../../store';
@@ -23,7 +23,7 @@ function NumInput({ value, onChange, step = '0.01', className = '' }: {
 }
 
 function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
-  const { updateFactoryQuote, removeFactoryQuote, addComponent, updateComponent, removeComponent, moveComponent } = useGameStore();
+  const { updateFactoryQuote, removeFactoryQuote, duplicateFactoryQuote, addComponent, updateComponent, removeComponent, moveComponent } = useGameStore();
   const [expanded, setExpanded] = useState(true);
 
   const update = (patch: Partial<FactoryQuote>) => updateFactoryQuote(game.id, quote.id, patch);
@@ -54,6 +54,9 @@ function QuoteCard({ game, quote }: { game: Game; quote: FactoryQuote }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button className="text-gray-300 hover:text-white" title="Dupliquer cette usine" onClick={() => duplicateFactoryQuote(game.id, quote.id)}>
+            <Copy size={16} />
+          </button>
           <button className="text-gray-300 hover:text-white" onClick={() => setExpanded(!expanded)}>
             {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
           </button>
